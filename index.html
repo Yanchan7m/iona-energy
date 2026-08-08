@@ -28,14 +28,21 @@
   .nav a{color:#fff;text-decoration:none;opacity:.82}.nav a:hover{opacity:1}
   @media(max-width:720px){.nav{display:none}}
 
-  /* 3D stage: one sticky canvas, 3 acts driven by scroll */
-  .stage3d{position:relative;height:420vh}
-  .sticky{position:sticky;top:0;height:100vh;overflow:hidden}
-  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .fade{position:absolute;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:4}
+  /* 3D: one fixed canvas sits behind the whole page. Three scroll zones drive the
+     three acts; each zone is followed by an opaque text panel that scrolls over
+     the canvas, so text and animation alternate all the way down. */
+  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+  .zone{position:relative;z-index:1;height:180vh}
+  .zsticky{position:sticky;top:0;height:100vh;overflow:hidden}
   .cap{position:absolute;z-index:6;pointer-events:none;left:clamp(16px,6vw,80px);max-width:620px;
     top:50%;transform:translateY(-50%);opacity:0;will-change:opacity,transform}
   .cap.right{left:auto;right:clamp(16px,6vw,80px);text-align:right}
+  /* soft scrim in the page's own ground colour: the copy now sits over the 3D at full
+     opacity, and the tanks and the sea are both bright enough to swallow grey text */
+  /* the gradient must reach zero alpha inside its own box, or the box edge shows as a
+     straight line over the 3D — hence radii of exactly 50% and the generous insets */
+  .cap::before{content:"";position:absolute;inset:-150px -240px;z-index:-1;pointer-events:none;
+    background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.95),rgba(7,9,12,.78) 42%,rgba(7,9,12,.32) 72%,rgba(7,9,12,0) 100%)}
   .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);
     display:inline-flex;align-items:center;gap:10px;margin:0 0 18px}
   .eyebrow::before{content:"";width:26px;height:1px;background:var(--accent)}
@@ -53,7 +60,9 @@
   @keyframes cue{0%,100%{opacity:.25;transform:scaleY(.5)}50%{opacity:1;transform:scaleY(1)}}
 
   .wrap{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
-  .section{padding:clamp(80px,13vh,150px) 0}
+  /* text panels ride above the fixed canvas and must be opaque to cover it */
+  .section{padding:clamp(80px,13vh,150px) 0;position:relative;z-index:2;background:var(--bg)}
+  #procedure{background:var(--bg2)}
   .reveal{opacity:0;transform:translateY(30px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
   .reveal.in{opacity:1;transform:none}.reveal.d1{transition-delay:.07s}.reveal.d2{transition-delay:.14s}.reveal.d3{transition-delay:.21s}
   .lead{color:var(--muted);font-size:clamp(16px,1.9vw,20px);line-height:1.55;max-width:64ch}
@@ -89,7 +98,8 @@
   .cta:hover{transform:translateY(-2px)}.cta .arrow{transition:transform .2s}.cta:hover .arrow{transform:translateX(4px)}
   .note{margin-top:28px;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:10px;
     background:var(--panel);color:var(--muted);font-size:13.5px;line-height:1.55;max-width:70ch}
-  footer{border-top:1px solid var(--line);padding:60px 0 48px;margin-top:20px}
+  footer{border-top:1px solid var(--line);padding:60px 0 48px;margin-top:20px;
+    position:relative;z-index:2;background:var(--bg)}
   .foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-end}
   .foot .big{font-size:clamp(38px,8vw,104px);font-weight:800;letter-spacing:-.03em;line-height:.9}
   .foot .meta{color:var(--muted);font-family:ui-monospace,monospace;font-size:12px;line-height:1.9}
@@ -113,31 +123,17 @@
   <nav class="nav"><a href="#products">Products</a><a href="#procedure">Procedure</a><a href="#hubs">Hubs</a><a href="#contact">Contact</a></nav>
 </header>
 
-<section class="stage3d" id="stage">
-  <div class="sticky">
-    <canvas id="c"></canvas>
-    <div class="fade" id="fade"></div>
+<canvas id="c"></canvas>
 
+<!-- ACT 0 · barrels — on screen and animating the moment the page loads -->
+<section class="zone" id="zone0" data-act="0">
+  <div class="zsticky">
     <div class="cap" id="cap0">
       <p class="eyebrow mono">Oil trading · Intermédiaire</p>
       <h1>We move oil,<br>cleanly.</h1>
       <p class="sub">Nous relions acheteurs et vendeurs vérifiés sur les produits raffinés — EN590 en tête —
       avec une procédure carrée : KYC, POP, SGS. Rien de flou.</p>
       <div class="pill"><span>EN590 10&nbsp;PPM</span><span>SPOT &amp; CONTRACT</span><span>ROTTERDAM · FUJAIRAH</span></div>
-    </div>
-
-    <div class="cap right" id="cap1">
-      <p class="eyebrow mono">Tank farm</p>
-      <h2>Vopak to Vopak.<br>Tank to tank.</h2>
-      <p class="sub">Transfert de titre en cuve, sans mouvement physique inutile. TTT / TTV sur les tank farms
-      de Rotterdam et Fujairah — Dip Test et Dip&nbsp;and&nbsp;Pay à l'appui.</p>
-    </div>
-
-    <div class="cap" id="cap2">
-      <p class="eyebrow mono">Livraison</p>
-      <h2>FOB, le monde<br>en manifold.</h2>
-      <p class="sub">Quand il faut bouger le produit, on l'embarque. FOB Rotterdam ou Fujairah, jusqu'à
-      100&nbsp;000&nbsp;MT en spot, inspection SGS à l'enlèvement.</p>
     </div>
     <div class="scroll-cue">Scroll<span></span></div>
   </div>
@@ -164,7 +160,19 @@
   </div>
 </section>
 
-<section class="section" id="procedure" style="background:var(--bg2)">
+<!-- ACT 1 · tank farm -->
+<section class="zone" id="zone1" data-act="1">
+  <div class="zsticky">
+    <div class="cap right" id="cap1">
+      <p class="eyebrow mono">Tank farm</p>
+      <h2>Vopak to Vopak.<br>Tank to tank.</h2>
+      <p class="sub">Transfert de titre en cuve, sans mouvement physique inutile. TTT / TTV sur les tank farms
+      de Rotterdam et Fujairah — Dip Test et Dip&nbsp;and&nbsp;Pay à l'appui.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="procedure">
   <div class="wrap">
     <div class="sechead">
       <div><p class="eyebrow reveal">Procédure</p><h2 class="reveal d1">Une transaction<br>sans surprise</h2></div>
@@ -180,6 +188,18 @@
       <div class="step reveal d2"><div class="no">06</div><h4>Titre &amp; suite</h4><p>Titre transféré, cargaison à l'acheteur. On garde la ligne ouverte pour le prochain lot.</p><div class="tags"><b>TITLE</b><b>ROLLS &amp; EXT.</b></div></div>
     </div>
     <div class="note mono">Conformité d'abord : origines documentées, aucune cargaison sous sanctions, KYC complet des deux côtés. Un ticket propre vaut mieux qu'un deal rapide.</div>
+  </div>
+</section>
+
+<!-- ACT 2 · tanker -->
+<section class="zone" id="zone2" data-act="2">
+  <div class="zsticky">
+    <div class="cap" id="cap2">
+      <p class="eyebrow mono">Livraison</p>
+      <h2>FOB, le monde<br>en manifold.</h2>
+      <p class="sub">Quand il faut bouger le produit, on l'embarque. FOB Rotterdam ou Fujairah, jusqu'à
+      100&nbsp;000&nbsp;MT en spot, inspection SGS à l'enlèvement.</p>
+    </div>
   </div>
 </section>
 
@@ -510,7 +530,9 @@ window.IONA3D = (function(){
     var b=new T.Mesh(new T.CylinderGeometry(0.09,0.09,0.06,12),L.M.chrome);b.position.set(0.28,0.77,0.1);g.add(b);
     return g;
   }
-  var act0=new T.Group();scene.add(act0);
+  // offset to the right: the hero copy now sits at full opacity from the first frame,
+  // so the barrels need to clear the left column instead of sitting under it
+  var act0=new T.Group();act0.position.x=1.35;scene.add(act0);
   var barrels=[];
   var bcols=[["#c9962a",{big:"EN590",small:"ULSD 10 PPM",color:"#f0a000"}],
              ["#1f6f4a",{big:"JET A-1",small:"AVIATION",color:"#2fd08a"}],
@@ -605,38 +627,61 @@ window.IONA3D = (function(){
     {group:act2, ground:"water",cam:{az:0.85,el:0.14,dist:44,ty:3.5}}
   ];
   var caps=[document.getElementById("cap0"),document.getElementById("cap1"),document.getElementById("cap2")];
-  var pbar=document.getElementById("pbar"),fade=document.getElementById("fade"),
-      stage=document.getElementById("stage");
-  var camS={az:0.7,el:0.16,dist:6.4,ty:0.9};
+  var pbar=document.getElementById("pbar");
+  var zones=[].map.call(document.querySelectorAll(".zone"),function(el){
+    return {el:el,act:parseInt(el.getAttribute("data-act"),10)};
+  });
+
+  /* The camera starts pulled back and higher, then glides to the act-0 pose on its
+     own: the barrels are framed and moving at load, without touching the scroll. */
+  var camS=reduce?{az:0.7,el:0.16,dist:6.4,ty:0.9}:{az:0.34,el:0.30,dist:10.6,ty:1.15};
 
   function pageP(){var h=document.documentElement;return L.clamp(h.scrollTop/(h.scrollHeight-h.clientHeight),0,1);}
-  var curP=0,tgtP=0,rafOn=false;
-  function computeT(){var r=stage.getBoundingClientRect();var tot=r.height-innerHeight;tgtP=L.clamp(-r.top/tot,0,1);}
+  var actIdx=0,lastIdx=0,local=0,onCanvas=true;
+  /* Active act = the zone covering most of the viewport; local = progress inside it.
+     Between two zones an opaque text panel covers the canvas, so the act swap is
+     never on screen when it happens. */
+  function computeT(){
+    var vh=innerHeight,bestI=-1,bestOv=0,seen=false,i,r,ov;
+    for(i=0;i<zones.length;i++){
+      r=zones[i].el.getBoundingClientRect();
+      ov=Math.min(r.bottom,vh)-Math.max(r.top,0);
+      if(ov>0)seen=true;
+      if(ov>bestOv){bestOv=ov;bestI=i;}
+    }
+    onCanvas=seen;
+    if(bestI<0)return;                       // no zone on screen: hold the last act
+    r=zones[bestI].el.getBoundingClientRect();
+    var tot=r.height-vh;
+    actIdx=zones[bestI].act;
+    local=tot>0?L.clamp(-r.top/tot,0,1):0;
+  }
 
   function render(t){
     pbar.style.width=(pageP()*100).toFixed(2)+"%";
-    var N=acts.length, f=curP*N, idx=Math.min(N-1,Math.floor(f)), local=f-idx;
+    var idx=actIdx;
     // visibility
     for(var i=0;i<acts.length;i++)acts[i].group.visible=(i===idx);
     var g=acts[idx].ground;
     land.visible=(g==="land");grid.visible=(g==="land");water.visible=(g==="water");
-    // boundary fade (hide the swap)
-    var edge=Math.min(f-Math.floor(f),Math.ceil(f)-f); // 0 at boundary,.5 mid
-    fade.style.opacity=(idx!==(curP*N|0))?0:L.clamp(1-edge/0.06,0,1).toFixed(3);
-    fade.style.opacity=L.clamp(1-edge/0.06,0,1).toFixed(3);
-    // captions
+    // captions: readable the moment their zone arrives, gone as it leaves. the head
+    // start on `local` is what makes the hero text legible at scroll 0.
     for(var c=0;c<caps.length;c++){
-      var vis=(c===idx)?L.clamp(Math.min(local/0.14,(1-local)/0.18),0,1):0;
+      var vis=(c===idx)?L.clamp(Math.min((local+0.22)/0.16,(1-local)/0.20),0,1):0;
       caps[c].style.opacity=vis.toFixed(3);
-      caps[c].style.transform="translateY("+(-8+ (1-vis)*22).toFixed(1)+"px)";
+      caps[c].style.transform="translateY(-50%) translateY("+((1-vis)*20).toFixed(1)+"px)";
     }
     // camera target for this act + subtle orbit via local
     var cam=acts[idx].cam;
     var taz=cam.az + (local-0.5)*0.5;
-    camS.az=L.lerp(camS.az,taz,0.08);
-    camS.el=L.lerp(camS.el,cam.el,0.08);
-    camS.dist=L.lerp(camS.dist,cam.dist,0.08);
-    camS.ty=L.lerp(camS.ty,cam.ty,0.08);
+    if(idx!==lastIdx){          // act swapped behind a text panel: cut, don't swing
+      camS.az=taz;camS.el=cam.el;camS.dist=cam.dist;camS.ty=cam.ty;lastIdx=idx;
+    }
+    var k=reduce?1:0.08;
+    camS.az=L.lerp(camS.az,taz,k);
+    camS.el=L.lerp(camS.el,cam.el,k);
+    camS.dist=L.lerp(camS.dist,cam.dist,k);
+    camS.ty=L.lerp(camS.ty,cam.ty,k);
     var cy=Math.sin(camS.el)*camS.dist+camS.ty, rr=Math.cos(camS.el)*camS.dist;
     camera.position.set(Math.sin(camS.az)*rr,cy,Math.cos(camS.az)*rr);
     camera.lookAt(0,camS.ty,0);
@@ -652,7 +697,10 @@ window.IONA3D = (function(){
     renderer.render(scene,camera);
   }
 
-  function resize(){var w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  function resize(){var w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+    // wide: the copy is a left column, so the barrels clear it. portrait: the copy is
+    // full-width at the top, so keep the stack centred instead of pushing it off-frame
+    act0.position.x=(w/h<0.95)?0.15:1.35;}
   addEventListener("resize",function(){resize();computeT();});
 
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});},{threshold:.16});
@@ -666,14 +714,14 @@ window.IONA3D = (function(){
 
   function loop(t){
     computeT();                    // read scroll every frame (robust)
-    curP=L.lerp(curP,tgtP,0.1);if(Math.abs(curP-tgtP)<0.0003)curP=tgtP;
-    render(t);
+    // draw only while a zone is on screen — a full-height text panel hides the canvas
+    if(onCanvas)render(t);else pbar.style.width=(pageP()*100).toFixed(2)+"%";
     requestAnimationFrame(loop);   // continuous (barrels/water animate)
   }
-  addEventListener("scroll",function(){computeT(); if(reduce){curP=tgtP;render(performance.now());}},{passive:true});
+  addEventListener("scroll",function(){computeT(); if(reduce)render(performance.now());},{passive:true});
 
   requestAnimationFrame(function(t){
-    resize();computeT();curP=tgtP;render(t||0);
+    resize();computeT();render(t||0);
     document.getElementById("loading").classList.add("hide");
     if(!reduce)requestAnimationFrame(loop);
   });

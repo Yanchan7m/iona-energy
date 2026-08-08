@@ -54,8 +54,11 @@ PROMPT.md    # prompt de génération pour la version framework (Next.js/R3F)
 
 - **3 scènes 3D** au scroll : barils (EN590 / JET A-1 / D6 / Crude), tank farm
   « Vopak to Vopak · tank to tank », pétrolier FOB sur mer animée.
-- Sections : Produits, Procédure (ICPO → CIS/POF → POP → SGS / Dip Test →
-  Dip & Pay / TTT), Hubs (Rotterdam · Fujairah), contact.
+- **Animations et textes alternent** de haut en bas : barils → Produits → tank
+  farm → Procédure (ICPO → CIS/POF → POP → SGS / Dip Test → Dip & Pay / TTT) →
+  pétrolier → Hubs (Rotterdam · Fujairah) → contact.
+- Les barils sont **à l'écran et animés dès le chargement** : la caméra fait son
+  travelling d'entrée toute seule, sans attendre le premier scroll.
 - Thème sombre, responsive, `prefers-reduced-motion` respecté.
 
 ## Personnaliser
@@ -64,3 +67,8 @@ PROMPT.md    # prompt de génération pour la version framework (Next.js/R3F)
 - Textes : directement dans le HTML des sections.
 - 3D : les fonctions `makeBarrel`, `makeTank`, l'acte pétrolier et les poses
   caméra sont dans le `<script>` en bas de `index.html`.
+- Rythme du scroll : un seul `<canvas>` en `position:fixed` derrière la page, et
+  une `<section class="zone" data-act="N">` par scène. La hauteur des `.zone`
+  (CSS) règle la durée de chaque animation ; les panneaux de texte sont opaques
+  et défilent par-dessus le canvas. Pour ajouter une scène : une `.zone` de plus
+  avec son `data-act`, et une entrée dans le tableau `acts`.
