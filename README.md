@@ -16,19 +16,37 @@ python3 -m http.server 8000
 # puis ouvre http://localhost:8000
 ```
 
-## Mettre en ligne (GitHub Pages)
+## Mettre en ligne
 
-GitHub Pages sur un repo **privé** nécessite un compte GitHub Pro. Si tu passes
-le repo en public : *Settings → Pages → Branch: `main` / root → Save*. L'URL sera
-`https://Yanchan7m.github.io/iona-energy`.
+Le site est servi sur **https://iona.axone-capital.com**.
 
-Sinon, tout hébergeur statique fonctionne (Netlify, Vercel, Cloudflare Pages) :
-il suffit de déployer le dossier tel quel.
+### GitHub Pages
+
+GitHub Pages sur un repo **privé** nécessite un compte GitHub Pro. Repo public :
+*Settings → Pages → Branch: `main` / root → Save*.
+
+Le fichier `CNAME` à la racine déclare déjà le domaine. Côté DNS d'`axone-capital.com`,
+ajouter un enregistrement :
+
+```
+Type   Nom     Valeur
+CNAME  iona    yanchan7m.github.io.
+```
+
+Puis dans *Settings → Pages → Custom domain*, saisir `iona.axone-capital.com` et
+cocher **Enforce HTTPS** une fois le certificat émis (quelques minutes).
+
+### Autre hébergeur
+
+Netlify, Vercel ou Cloudflare Pages fonctionnent aussi : déployer le dossier tel
+quel et pointer le sous-domaine `iona` vers l'hébergeur (le fichier `CNAME` est
+alors ignoré, la config se fait dans le dashboard).
 
 ## Structure
 
 ```
 index.html   # le site complet (HTML + CSS + Three.js inliné)
+CNAME        # domaine personnalisé pour GitHub Pages
 PROMPT.md    # prompt de génération pour la version framework (Next.js/R3F)
 ```
 
