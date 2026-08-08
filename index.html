@@ -809,41 +809,340 @@ window.IONA3D = (function(){
     fb.rotation.z=Math.PI/2;fb.position.set(-2,1.2+pz*0.7,-6);act1.add(fb);
     flowMats.push({mesh:fb,off:pz*7});
   }
+  /* ---- road tanker at the loading bay (forward = +X) ----
+     A fuel tanker is polished aluminium with an oval barrel, ring stiffeners, manholes
+     under a spill rail, and an orange dangerous-goods panel. Those are the cues that
+     say "fuel tanker" rather than "cylinder on wheels". */
+  function truckTankTex(){
+    var c=cv(1024,256),x=c.getContext("2d"),i;
+    x.fillStyle="#c6cad0";x.fillRect(0,0,1024,256);
+    for(i=0;i<760;i++){                                  // brushed lengthwise
+      x.fillStyle=(i%2?"rgba(255,255,255,":"rgba(0,0,0,")+(0.02+Math.random()*0.05)+")";
+      x.fillRect(0,Math.random()*256,1024,0.7+Math.random()*1.5);
+    }
+    x.fillStyle="#0e1116";x.fillRect(0,98,1024,60);       // brand band
+    x.textBaseline="middle";
+    x.fillStyle="#f0a000";x.font="bold 44px Helvetica,Arial";x.fillText("IONA ENERGY",38,128);
+    x.fillStyle="#c3ccd6";x.font="19px ui-monospace,monospace";x.fillText("EN590 · ULSD 10 PPM",356,131);
+    x.fillStyle="#e8730f";x.fillRect(700,101,146,54);     // orange ADR panel
+    x.strokeStyle="#0e1116";x.lineWidth=3;x.strokeRect(700,101,146,54);
+    x.beginPath();x.moveTo(700,128);x.lineTo(846,128);x.stroke();
+    x.fillStyle="#0e1116";x.font="bold 21px ui-monospace,monospace";x.textAlign="center";
+    x.fillText("30",773,114);x.fillText("1202",773,142);x.textAlign="left";
+    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;return t;
+  }
+
+  function makeRoadTanker(){
+    var g=new T.Group();
+    // a touch less mirror than real polished alloy: at this scale a 0.95 metal barrel
+    // just reflects the dark sky and reads black
+    var alu=new T.MeshStandardMaterial({map:truckTankTex(),metalness:0.62,roughness:0.30});
+    var plain=paint(0xc2c9d1,0.6,0.32), cabc=paint(0x28323f,0.5,0.4),
+        blk=L.M.dark, chr=L.M.chrome;
+    function bx(w,h,d,m){return new T.Mesh(new T.BoxGeometry(w,h,d),m);}
+    function put(m,x,y,z){m.position.set(x,y,z);g.add(m);return m;}
+    function tyre(x,z){                                  // tyre + rim
+      var w=new T.Group();
+      var tg=new T.CylinderGeometry(0.52,0.52,0.32,24);tg.rotateX(Math.PI/2);
+      w.add(new T.Mesh(tg,L.M.tire));
+      var rg=new T.CylinderGeometry(0.27,0.27,0.35,14);rg.rotateX(Math.PI/2);
+      w.add(new T.Mesh(rg,L.M.rim));
+      w.position.set(x,0.52,z);g.add(w);
+    }
+
+    [0.44,-0.44].forEach(function(z){put(bx(11.6,0.24,0.2,blk),-1.1,0.98,z);});   // chassis
+
+    // oval barrel: scale.x squashes world Y once the cylinder is laid along X
+    var barrel=new T.Mesh(new T.CylinderGeometry(1.0,1.0,7.5,34,1,true),alu);
+    barrel.rotation.z=Math.PI/2;barrel.scale.x=0.84;put(barrel,-2.7,2.0,0);
+    [-6.45,1.05].forEach(function(x){                    // dished ends, at the barrel ends
+      var e=new T.Mesh(new T.SphereGeometry(1.0,24,16),plain);
+      e.scale.set(0.42,0.84,1);e.position.set(x,2.0,0);g.add(e);   // x flat = along the axis
+    });
+    [-5.4,-3.7,-2.0,-0.3].forEach(function(x){           // ring stiffeners = compartments
+      var r=new T.Mesh(new T.TorusGeometry(1.01,0.05,8,28),plain);
+      r.rotation.y=Math.PI/2;r.scale.y=0.84;r.position.set(x,2.0,0);g.add(r);
+    });
+    var rail=bx(7.4,0.07,1.5,plain);put(rail,-2.7,2.86,0);                       // spill rail
+    [-5.2,-3.5,-1.8,-0.6].forEach(function(x){           // manholes under the rail
+      var mh=new T.Mesh(new T.CylinderGeometry(0.24,0.24,0.16,16),chr);
+      mh.position.set(x,2.9,0);g.add(mh);
+    });
+    [0.72,-0.72].forEach(function(z){                    // walkway kerb
+      var k=bx(7.4,0.1,0.06,chr);put(k,-2.7,2.92,z);
+    });
+    var cab2=bx(1.5,1.3,2.0,plain);put(cab2,-6.7,1.55,0);                        // rear cabinet
+    [0.5,-0.5].forEach(function(z){
+      var hose=new T.Mesh(new T.TorusGeometry(0.3,0.09,8,18),blk);
+      hose.position.set(-6.72,1.6,z);hose.rotation.y=Math.PI/2;g.add(hose);
+    });
+    [0.55,-0.55].forEach(function(z){                    // discharge valves
+      var v=new T.Mesh(new T.CylinderGeometry(0.09,0.09,0.5,12),chr);
+      v.rotation.x=Math.PI/2;v.position.set(-4.4,1.35,z*1.1);g.add(v);
+    });
+    var legs=bx(0.16,0.75,1.5,blk);put(legs,-4.9,0.6,0);                         // landing legs
+
+    /* ---- tractor unit ---- */
+    put(bx(2.2,2.25,2.42,cabc),3.6,2.2,0);
+    var slp=bx(0.5,1.5,2.42,cabc);slp.position.set(4.85,1.55,0);g.add(slp);
+    var wsh=bx(0.1,1.05,2.2,L.M.glass);wsh.position.set(4.62,2.62,0);wsh.rotation.z=-0.3;g.add(wsh);
+    [1.22,-1.22].forEach(function(z){
+      var sw=bx(1.2,0.72,0.06,L.M.glass);sw.position.set(3.5,2.5,z);g.add(sw);
+      var mr=bx(0.06,0.4,0.24,blk);mr.position.set(4.5,2.66,z*1.22);g.add(mr);
+      var st=new T.Mesh(new T.CylinderGeometry(0.075,0.075,2.4,12),chr);          // exhaust
+      st.position.set(2.45,2.6,z*0.98);g.add(st);
+      var ft=new T.Mesh(new T.CylinderGeometry(0.36,0.36,1.5,18),chr);            // fuel tank
+      ft.rotation.z=Math.PI/2;ft.position.set(3.0,0.92,z*1.06);g.add(ft);
+    });
+    var defl=bx(0.7,0.85,2.3,cabc);defl.position.set(2.9,3.6,0);defl.rotation.z=0.22;g.add(defl);
+    put(bx(0.14,1.0,2.1,chr),5.13,1.35,0);                                       // grille
+    put(bx(0.28,0.3,2.42,chr),5.16,0.78,0);                                      // bumper
+    [0.8,-0.8].forEach(function(z){put(bx(0.1,0.26,0.36,L.M.light),5.18,1.12,z);});
+    var fifth=new T.Mesh(new T.CylinderGeometry(0.42,0.42,0.12,16),blk);
+    fifth.position.set(1.5,1.14,0);g.add(fifth);                                 // fifth wheel
+
+    tyre(4.35,1.05);tyre(4.35,-1.05);                    // steer axle
+    [2.25,1.4].forEach(function(x){[0.82,1.18,-0.82,-1.18].forEach(function(z){tyre(x,z);});});
+    [-5.55,-6.45].forEach(function(x){[0.82,1.18,-0.82,-1.18].forEach(function(z){tyre(x,z);});});
+    [4.35,1.85,-6.0].forEach(function(x){                // mudguards
+      [1.0,-1.0].forEach(function(z){var mg=bx(x>3?1.3:2.4,0.08,0.62,blk);mg.position.set(x,1.16,z);g.add(mg);});
+    });
+
+    g.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+    return g;
+  }
+  // the loading bay: truck under its gantry, parked in the open lane between tanks
+  (function(){
+    // placed on a sight line that clears every tank between here and the act-1 camera
+    // turned broadside to the act-1 camera, or the cab hides its own barrel
+    var bay=new T.Group();bay.position.set(-7,0,13.5);bay.rotation.y=-2.59;act1.add(bay);
+    bay.add(makeRoadTanker());
+    [1.9,-1.9].forEach(function(z){
+      var col=new T.Mesh(new T.CylinderGeometry(0.14,0.14,6.4,12),pipeMat);
+      col.position.set(-2.7,3.2,z);bay.add(col);
+    });
+    var beam=new T.Mesh(new T.BoxGeometry(0.3,0.3,4.2),pipeMat);beam.position.set(-2.7,6.3,0);bay.add(beam);
+    var arm=new T.Mesh(new T.CylinderGeometry(0.11,0.11,2.6,12),pipeMat);   // loading arm
+    arm.position.set(-2.7,5.0,0);arm.rotation.x=0.35;bay.add(arm);
+  })();
+
   act1.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
 
-  /* ================= ACT 2 · TANKER ================= */
+  /* ================= ACT 2 · TANKER =================
+     A products tanker, hull first: the shape is lofted through stations — a table of
+     half-breadths, keel rise and sheer — instead of being a stretched box. That is what
+     gives a fine bow entry, a full parallel middle body and a raised sheer forward.
+     The three hull bands (anti-fouling, boot top, topside) are vertex colours keyed to
+     height, which sidesteps wrapping a texture around a lofted surface. */
+  var HULL_L=15.5, HULL_WL=1.35;          // half-length, and waterline in hull-local Y
+
+  function tankerHull(){
+    var NS=44,M=12,BEAM=2.78,BILGE=0.62;
+    var HB=[[-1,0.42],[-0.9,0.64],[-0.78,0.85],[-0.62,0.96],[-0.3,1],[0.15,1],
+            [0.45,0.97],[0.68,0.86],[0.84,0.62],[0.94,0.33],[1,0.05]];   // half-breadth
+    var KY=[[-1,0.62],[-0.85,0.26],[-0.6,0.04],[0.4,0],[0.72,0.12],[0.9,0.5],[1,1.15]];
+    var DY=[[-1,3.62],[-0.6,3.44],[0.1,3.38],[0.6,3.5],[0.9,3.85],[1,4.06]];  // sheer
+    function tab(T2,t){
+      if(t<=T2[0][0])return T2[0][1];
+      for(var k=1;k<T2.length;k++)if(t<=T2[k][0]){
+        var a=T2[k-1],b=T2[k];return a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0]);}
+      return T2[T2.length-1][1];
+    }
+    function sect(t){                     // half-section: keel centreline → deck edge
+      var hb=BEAM*tab(HB,t),ky=tab(KY,t),dy=tab(DY,t),flat=hb*0.74,top=ky+BILGE,o=[],q,s,a,f;
+      for(q=0;q<M;q++){
+        s=q/(M-1);
+        if(s<0.26)o.push([flat*(s/0.26),ky]);                       // flat of bottom
+        else if(s<0.56){a=(s-0.26)/0.30*Math.PI/2;                  // bilge radius
+          o.push([flat+(hb-flat)*Math.sin(a),ky+BILGE*(1-Math.cos(a))]);}
+        else{f=(s-0.56)/0.44;o.push([hb-hb*0.012*f,top+(dy-top)*f]);}  // side, slight tumblehome
+      }
+      return {pts:o,dy:dy,hb:hb};
+    }
+    function colAt(y){
+      if(y<HULL_WL-0.17)return [0.40,0.085,0.055];                  // anti-fouling
+      if(y<HULL_WL+0.13)return [0.045,0.05,0.06];                   // boot top
+      return [0.155,0.18,0.21];                                     // topside
+    }
+    var pos=[],col=[],idx=[],secs=[],i,j,side,base,c;
+    for(i=0;i<NS;i++)secs.push(sect(-1+2*i/(NS-1)));
+    // both sides, wound outward so front faces point away from the centreline
+    for(side=0;side<2;side++){
+      base=pos.length/3;
+      for(i=0;i<NS;i++){
+        var sc=side?-1:1;
+        for(j=0;j<M;j++){
+          var x=(-1+2*i/(NS-1))*HULL_L,z=secs[i].pts[j][0]*sc,y=secs[i].pts[j][1];
+          pos.push(x,y,z);c=colAt(y);col.push(c[0],c[1],c[2]);
+        }
+      }
+      for(i=0;i<NS-1;i++)for(j=0;j<M-1;j++){
+        var a2=base+i*M+j,b2=a2+M,c2=b2+1,d2=a2+1;
+        if(side)idx.push(a2,b2,c2,a2,c2,d2);else idx.push(a2,c2,b2,a2,d2,c2);
+      }
+    }
+    // main deck, spanning the two deck edges
+    base=pos.length/3;
+    for(i=0;i<NS;i++){
+      var hb2=secs[i].hb*0.988,xx=(-1+2*i/(NS-1))*HULL_L;
+      pos.push(xx,secs[i].dy,hb2);col.push(0.30,0.15,0.12);
+      pos.push(xx,secs[i].dy,-hb2);col.push(0.30,0.15,0.12);
+    }
+    for(i=0;i<NS-1;i++){var a3=base+i*2;idx.push(a3,a3+2,a3+1,a3+1,a3+2,a3+3);}
+    // transom, closing the stern flat
+    base=pos.length/3;
+    for(j=0;j<M;j++){var p0=secs[0].pts[j];
+      pos.push(-HULL_L,p0[1],p0[0]);c=colAt(p0[1]);col.push(c[0],c[1],c[2]);
+      pos.push(-HULL_L,p0[1],-p0[0]);col.push(c[0],c[1],c[2]);}
+    for(j=0;j<M-1;j++){var a4=base+j*2;idx.push(a4,a4+1,a4+3,a4,a4+3,a4+2);}
+
+    var geo=new T.BufferGeometry();
+    geo.setAttribute("position",new T.Float32BufferAttribute(pos,3));
+    geo.setAttribute("color",new T.Float32BufferAttribute(col,3));
+    geo.setIndex(idx);geo.computeVertexNormals();
+    return geo;
+  }
+
+  /* Foam traced along the hull's waterline ellipse, plus the wake astern. rx/ry are the
+     hull's footprint in texture pixels, so the white hugs the plating instead of
+     spreading into a pale lagoon around the ship. */
+  function foamTex(rx,ry){
+    var c=cv(512,512),x=c.getContext("2d"),i,a,j,u,sp;
+    x.clearRect(0,0,512,512);
+    for(i=0;i<3200;i++){
+      a=Math.random()*6.283;j=1+Math.random()*Math.random()*9;   // tight to the hull
+      x.fillStyle="rgba(255,255,255,"+(0.06+Math.random()*0.26)+")";
+      x.beginPath();x.arc(256+Math.cos(a)*(rx+j),256+Math.sin(a)*(ry+j),0.8+Math.random()*2.2,0,6.283);x.fill();
+    }
+    for(i=0;i<900;i++){                     // bow wave: brighter, thrown forward
+      a=(Math.random()-0.5)*1.5;
+      x.fillStyle="rgba(255,255,255,"+(0.10+Math.random()*0.34)+")";
+      x.beginPath();x.arc(256+Math.cos(a)*(rx+Math.random()*13),256+Math.sin(a)*(ry+Math.random()*15),1+Math.random()*2.4,0,6.283);x.fill();
+    }
+    for(i=0;i<1400;i++){                    // wake, fading off the stern
+      u=Math.random();sp=ry*0.5+u*ry*1.5;
+      x.fillStyle="rgba(255,255,255,"+((1-u)*0.16*Math.random())+")";
+      x.beginPath();x.arc(256-rx-u*(250-rx),256+(Math.random()-0.5)*sp,1+Math.random()*2.2,0,6.283);x.fill();
+    }
+    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;return t;
+  }
+
   var act2=new T.Group();act2.visible=false;scene.add(act2);
   (function(){
-    var g=act2;
-    var hull=box(26,3,6,paint(0x14181e,0.5,0.45));hull.position.y=1.6;g.add(hull);
-    g.add(function(){var m=box(26,0.6,6,L.M.red);m.position.y=0.4;return m;}());
-    var deck=box(26,0.4,6,paint(0x2a2f36,0.5,0.5));deck.position.y=3.2;g.add(deck);
-    // bow
-    var bow=new T.Mesh(new T.CylinderGeometry(0.1,3,4,4),paint(0x14181e,0.5,0.45));
-    bow.rotation.z=-Math.PI/2;bow.rotation.y=Math.PI/4;bow.position.set(14.5,1.6,0);bow.scale.z=2;g.add(bow);
-    // bridge/tower stern
-    var tower=box(3,4,5.4,paint(0xe8edf2,0.4,0.5));tower.position.set(-9.5,5.6,0);g.add(tower);
-    g.add(function(){var m=box(3,0.6,5.4,L.M.dark);m.position.set(-9.5,7.9,0);return m;}());
-    var funnel=new T.Mesh(new T.CylinderGeometry(0.9,1.1,2.6,20),paint(0xf0a000,0.5,0.45));funnel.position.set(-10.8,9.4,0);g.add(funnel);
-    // deck manifold: central pipe + valve wheels + tank domes
-    var mani=new T.Mesh(new T.CylinderGeometry(0.35,0.35,20,16),paint(0x39424c,0.7,0.4));
-    mani.rotation.z=Math.PI/2;mani.position.set(1,3.8,0);g.add(mani);
-    for(var i=0;i<5;i++){
-      var dome=new T.Mesh(new T.SphereGeometry(1.6,28,16,0,Math.PI*2,0,Math.PI/2),paint(0xb7bcc2,0.5,0.45));
-      dome.position.set(8-i*4,3.4,0);dome.scale.y=0.5;g.add(dome);
-      var wheel=new T.Mesh(new T.TorusGeometry(0.5,0.08,8,20),L.M.chrome);
-      wheel.position.set(8-i*4,4.4,1.6);g.add(wheel);
+    var ship=new T.Group();
+    ship.position.y=-HULL_WL;             // sink her so the boot top meets the sea
+    act2.add(ship);
+    var grey=paint(0x1a1f26,0.55,0.45), white=paint(0xdfe4ea,0.35,0.5),
+        steel=paint(0x8f979f,0.9,0.35), pipe=paint(0x3b444e,0.75,0.38),
+        deckRed=paint(0x5c2f26,0.4,0.62);
+
+    var hull=new T.Mesh(tankerHull(),new T.MeshStandardMaterial({
+      vertexColors:true,metalness:0.55,roughness:0.44,envMapIntensity:0.9}));
+    hull.castShadow=true;hull.receiveShadow=true;ship.add(hull);
+
+    // bulbous bow, mostly under water — it reads on the bow wave
+    var bulb=new T.Mesh(new T.SphereGeometry(0.62,20,14),paint(0x66170e,0.5,0.5));
+    bulb.scale.set(2.0,0.85,1);bulb.position.set(14.6,0.72,0);ship.add(bulb);
+
+    // raised forecastle: kept inside the half-breadth at that station, or it reads as a
+    // slab hovering off the bow. Windlasses and the foremast sit on it.
+    var fc=new T.Mesh(new T.BoxGeometry(2.8,0.34,3.05),grey);fc.position.set(12.2,3.95,0);ship.add(fc);
+    [1.0,-1.0].forEach(function(z){
+      var wl=new T.Mesh(new T.CylinderGeometry(0.26,0.26,0.5,14),steel);
+      wl.rotation.x=Math.PI/2;wl.position.set(12.3,4.36,z);ship.add(wl);
+    });
+    var fmast=new T.Mesh(new T.CylinderGeometry(0.045,0.055,2.2,10),steel);
+    fmast.position.set(11.2,5.2,0);ship.add(fmast);
+    var fyard=new T.Mesh(new T.BoxGeometry(0.05,0.04,1.1),steel);fyard.position.set(11.2,5.95,0);ship.add(fyard);
+
+    /* ---- accommodation block aft: five decks, window bands, bridge wings ---- */
+    var hs=[[2.9,4.9],[2.9,4.7],[2.7,4.5],[2.6,4.3],[2.4,4.0]];
+    for(var d=0;d<hs.length;d++){
+      var lv=new T.Mesh(new T.BoxGeometry(hs[d][0],0.86,hs[d][1]),white);
+      lv.position.set(-11.6,4.0+d*0.92,0);lv.castShadow=true;ship.add(lv);
+      var win=new T.Mesh(new T.BoxGeometry(hs[d][0]*0.92,0.30,hs[d][1]+0.04),L.M.glass);
+      win.position.set(-11.6,4.18+d*0.92,0);ship.add(win);
     }
-    // rails
-    [2.9,-2.9].forEach(function(z){var rail=box(24,0.08,0.08,L.M.chrome);rail.position.set(1,3.6,z);g.add(rail);});
-    g.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+    var bridge=new T.Mesh(new T.BoxGeometry(2.3,0.94,6.6),white);   // wings overhang the sides
+    bridge.position.set(-11.6,8.6,0);bridge.castShadow=true;ship.add(bridge);
+    var bwin=new T.Mesh(new T.BoxGeometry(2.0,0.44,6.64),L.M.glass);
+    bwin.position.set(-11.4,8.78,0);ship.add(bwin);
+    var roof=new T.Mesh(new T.BoxGeometry(2.4,0.12,6.7),grey);roof.position.set(-11.6,9.13,0);ship.add(roof);
+
+    var funnel=new T.Mesh(new T.CylinderGeometry(0.62,0.72,2.5,20),grey);
+    funnel.position.set(-13.3,9.4,0);funnel.castShadow=true;ship.add(funnel);
+    var fband=new T.Mesh(new T.CylinderGeometry(0.66,0.70,0.85,20),paint(0xf0a000,0.4,0.5));
+    fband.position.set(-13.3,9.75,0);ship.add(fband);
+    var mast=new T.Mesh(new T.CylinderGeometry(0.05,0.05,2.6,10),steel);
+    mast.position.set(-11.9,10.5,0);ship.add(mast);
+    [[0.5,1.5],[0.34,2.1]].forEach(function(cr){                   // radar crosstrees
+      var y=new T.Mesh(new T.BoxGeometry(0.06,0.05,cr[0]*2),steel);
+      y.position.set(-11.9,9.2+cr[1],0);ship.add(y);
+    });
+
+    /* ---- cargo deck: pipelines, manifold amidships, hatches, catwalk ---- */
+    [1.05,-1.05].forEach(function(z){                              // fore-aft pipelines
+      var pl=new T.Mesh(new T.CylinderGeometry(0.17,0.17,20.5,14),pipe);
+      pl.rotation.z=Math.PI/2;pl.position.set(0.6,3.72,z);ship.add(pl);
+    });
+    for(var m2=0;m2<6;m2++){                                       // manifold risers + valves
+      var zz=-1.5+m2*0.6;
+      var ris=new T.Mesh(new T.CylinderGeometry(0.13,0.13,1.5,12),pipe);
+      ris.position.set(0.6,4.3,zz);ship.add(ris);
+      var el=new T.Mesh(new T.SphereGeometry(0.15,10,8),pipe);el.position.set(0.6,5.02,zz);ship.add(el);
+      var vw=new T.Mesh(new T.TorusGeometry(0.17,0.035,7,16),L.M.chrome);
+      vw.position.set(0.6,4.72,zz);vw.rotation.y=Math.PI/2;ship.add(vw);
+    }
+    var tray=new T.Mesh(new T.BoxGeometry(2.6,0.1,4.4),grey);tray.position.set(0.6,3.6,0);ship.add(tray);
+    var hcrane=new T.Mesh(new T.CylinderGeometry(0.12,0.14,3.4,12),paint(0xf0a000,0.5,0.5));
+    hcrane.position.set(0.6,5.4,2.0);hcrane.rotation.x=0.45;ship.add(hcrane);
+
+    for(var h2=0;h2<5;h2++){                                       // tank hatches + P/V valves
+      var hx2=8.6-h2*3.1;
+      var hatch=new T.Mesh(new T.CylinderGeometry(0.5,0.5,0.16,20),grey);
+      hatch.position.set(hx2,3.62,0);ship.add(hatch);
+      [1.75,-1.75].forEach(function(z){
+        var pv=new T.Mesh(new T.CylinderGeometry(0.1,0.1,0.8,12),steel);
+        pv.position.set(hx2,3.94,z);ship.add(pv);
+        var cap=new T.Mesh(new T.SphereGeometry(0.14,10,8),steel);cap.position.set(hx2,4.34,z);ship.add(cap);
+      });
+    }
+    var cat=new T.Mesh(new T.BoxGeometry(19.5,0.09,0.66),steel);   // raised catwalk
+    cat.position.set(1.0,4.62,0);ship.add(cat);
+    for(var sp=0;sp<12;sp++){
+      var stx=-8.2+sp*1.72;
+      var leg=new T.Mesh(new T.BoxGeometry(0.07,0.95,0.07),steel);leg.position.set(stx,4.14,0);ship.add(leg);
+      [0.32,-0.32].forEach(function(z){
+        var hr=new T.Mesh(new T.BoxGeometry(0.05,0.5,0.05),steel);hr.position.set(stx,4.9,z);ship.add(hr);
+      });
+    }
+    [0.34,-0.34].forEach(function(z){
+      var cr2=new T.Mesh(new T.BoxGeometry(19.5,0.05,0.05),steel);cr2.position.set(1.0,5.16,z);ship.add(cr2);
+    });
+
+    // deck-edge railing
+    for(var r3=0;r3<26;r3++){
+      var t3=-0.92+1.84*r3/25,xr=t3*HULL_L,zr=2.62*Math.pow(1-Math.pow(Math.abs(t3),3.4),0.4);
+      [zr,-zr].forEach(function(z){
+        var st=new T.Mesh(new T.BoxGeometry(0.05,0.5,0.05),steel);st.position.set(xr,3.72,z);ship.add(st);
+      });
+    }
+
+    /* ---- foam where the hull meets the sea, plus the wake ---- */
+    // plane sized so the hull (31 × 5.6) maps onto the ellipse drawn in the texture
+    var FW=40,FD=11;
+    var foam=new T.Mesh(new T.PlaneGeometry(FW,FD),new T.MeshBasicMaterial({
+      map:foamTex(2*HULL_L/FW*256,2.78/FD*2*256),transparent:true,depthWrite:false,opacity:0.5}));
+    foam.rotation.x=-Math.PI/2;foam.position.set(-2.2,0.05,0);act2.add(foam);
+
+    ship.traverse(function(m){if(m.isMesh&&m!==hull){m.castShadow=true;m.receiveShadow=true;}});
   })();
 
   /* ================= ACT CONTROL ================= */
   var acts=[
     {group:act0, ground:"land", cam:{az:0.7,el:0.16,dist:7.7,ty:1.45}},
-    {group:act1, ground:"land", cam:{az:0.5,el:0.12,dist:34,ty:5.5}},
-    {group:act2, ground:"water",cam:{az:0.85,el:0.14,dist:44,ty:3.5}}
+    {group:act1, ground:"land", cam:{az:0.5,el:0.15,dist:46,ty:6.2}},
+    {group:act2, ground:"water",cam:{az:0.95,el:0.13,dist:29,ty:2.1}}
   ];
   var caps=[document.getElementById("cap0"),document.getElementById("cap1"),document.getElementById("cap2")];
   var pbar=document.getElementById("pbar");
