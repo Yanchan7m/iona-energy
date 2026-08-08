@@ -31,9 +31,13 @@
   /* 3D: one fixed canvas sits behind the whole page. Three scroll zones drive the
      three acts; each zone is followed by an opaque text panel that scrolls over
      the canvas, so text and animation alternate all the way down. */
-  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
-  .zone{position:relative;z-index:1;height:180vh}
-  .zsticky{position:sticky;top:0;height:100vh;overflow:hidden}
+  /* --vh is one screen. it defaults to 100vh and is only overridden when the page is
+     embedded in a frame that was grown to the content height — there innerHeight is
+     many screens tall, and raw vh units would blow the scenes up. see stageH(). */
+  :root{--vh:100vh}
+  canvas#c{position:fixed;top:0;left:0;width:100%;height:var(--vh);display:block;z-index:0}
+  .zone{position:relative;z-index:1;height:calc(var(--vh)*1.8)}
+  .zsticky{position:sticky;top:0;height:var(--vh);overflow:hidden}
   .cap{position:absolute;z-index:6;pointer-events:none;left:clamp(16px,6vw,80px);max-width:620px;
     top:50%;transform:translateY(-50%);opacity:0;will-change:opacity,transform}
   .cap.right{left:auto;right:clamp(16px,6vw,80px);text-align:right}
@@ -642,7 +646,7 @@ window.IONA3D = (function(){
      Between two zones an opaque text panel covers the canvas, so the act swap is
      never on screen when it happens. */
   function computeT(){
-    var vh=innerHeight,bestI=-1,bestOv=0,seen=false,i,r,ov;
+    var vh=stageH(),bestI=-1,bestOv=0,seen=false,i,r,ov;
     for(i=0;i<zones.length;i++){
       r=zones[i].el.getBoundingClientRect();
       ov=Math.min(r.bottom,vh)-Math.max(r.top,0);
@@ -697,7 +701,16 @@ window.IONA3D = (function(){
     renderer.render(scene,camera);
   }
 
-  function resize(){var w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+  /* One screen's worth of height. Inside a frame that the host grew to the content
+     height, innerHeight reports the whole document — many screens — which would scale
+     every scene up and push the hero off the top. Fall back to the display height. */
+  function stageH(){
+    var s=(window.screen&&screen.height)?screen.height:0;
+    return (s&&innerHeight>s*1.4)?s:innerHeight;
+  }
+  function setVH(){document.documentElement.style.setProperty("--vh",stageH()+"px");}
+
+  function resize(){setVH();var w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
     // wide: the copy is a left column, so the barrels clear it. portrait: the copy is
     // full-width at the top, so keep the stack centred instead of pushing it off-frame
     act0.position.x=(w/h<0.95)?0.15:1.35;}
