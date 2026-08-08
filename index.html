@@ -142,22 +142,16 @@
   .lang:hover span:not(.on){color:var(--ink)}
   .lang:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
-  /* WhatsApp in the bar: the one entry point that survives every context, since a
-     viewport-anchored element cannot follow the screen inside a stretched frame */
-  .wa-top{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
-    background:#25d366;flex:0 0 auto;transition:transform .2s,box-shadow .2s;
-    box-shadow:0 2px 10px rgba(0,0,0,.4)}
-  .wa-top svg{width:19px;height:19px;fill:#fff}
-  .wa-top:hover{transform:scale(1.08);box-shadow:0 4px 14px rgba(37,211,102,.45)}
-  .wa-top:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-
-  /* floating WhatsApp, bottom right, sized and inset responsively. Hidden when the page
-     is embedded in a frame stretched to the content height — there it would sit nine
-     screens down at the very bottom of the document instead of floating. */
-  html.embedded .wa{display:none}
-  .wa{position:fixed;z-index:72;right:clamp(14px,3vw,28px);
+  /* Both controls float together, bottom right. A fixed element anchors to the bottom of
+     the document — not the screen — when the page is embedded in a frame stretched to
+     the content height; there the dock is switched to absolute at the foot of the first
+     screen, so it still shows in the requested corner instead of nine screens down. */
+  .dock{position:fixed;z-index:72;right:clamp(14px,3vw,28px);
     bottom:calc(clamp(14px,3vw,26px) + env(safe-area-inset-bottom,0px));
-    width:clamp(48px,4.6vw,58px);height:clamp(48px,4.6vw,58px);border-radius:50%;
+    display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+  html.embedded .dock{position:absolute;bottom:auto;top:calc(var(--vh) - 116px)}
+
+  .wa{width:clamp(48px,4.6vw,58px);height:clamp(48px,4.6vw,58px);border-radius:50%;position:relative;
     display:grid;place-items:center;background:#25d366;text-decoration:none;
     box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .2s;animation:waPulse 3s ease-out infinite}
   .wa>svg{width:56%;height:56%;fill:#fff}
@@ -189,12 +183,6 @@
   <div class="brand">IONA·ENERGY</div>
   <div class="topright">
     <nav class="nav"><a href="#products">Products</a><a href="#procedure">Procedure</a><a href="#hubs">Hubs</a><a href="#contact">Contact</a></nav>
-    <a class="wa-top" data-wa href="https://wa.me/33660687771" target="_blank" rel="noopener" aria-label="WhatsApp">
-      <svg aria-hidden="true" focusable="false"><use href="#wa-glyph"/></svg>
-    </a>
-    <button class="lang" type="button" aria-label="Passer en français">
-      <span data-l="en">EN</span><span data-l="fr">FR</span>
-    </button>
   </div>
 </header>
 
@@ -291,6 +279,18 @@
   </div>
 </section>
 
+<!-- ACT 3 · road tanker -->
+<section class="zone" id="zone3" data-act="3">
+  <div class="zsticky">
+    <div class="cap right" id="cap3">
+      <p class="eyebrow mono" data-i18n="a3.eyebrow">Road loading</p>
+      <h2 data-i18n="a3.h2">Loaded at the rack,<br>gone by morning.</h2>
+      <p class="sub" data-i18n="a3.sub">For regional volumes we load road tankers at the rack: ADR compliant, sealed
+      compartments, a weighbridge ticket with every lift.</p>
+    </div>
+  </div>
+</section>
+
 <footer id="contact">
   <div class="wrap"><div class="foot">
     <div>
@@ -306,10 +306,15 @@
   </div></div>
 </footer>
 
-<a class="wa" id="wa" data-wa href="https://wa.me/33660687771" target="_blank" rel="noopener" aria-label="WhatsApp">
-  <svg aria-hidden="true" focusable="false"><use href="#wa-glyph"/></svg>
-  <span class="wa-label" data-i18n="wa.label">Chat on WhatsApp</span>
-</a>
+<div class="dock">
+  <button class="lang" type="button" aria-label="Passer en français">
+    <span data-l="en">EN</span><span data-l="fr">FR</span>
+  </button>
+  <a class="wa" id="wa" data-wa href="https://wa.me/33660687771" target="_blank" rel="noopener" aria-label="WhatsApp">
+    <svg aria-hidden="true" focusable="false"><use href="#wa-glyph"/></svg>
+    <span class="wa-label" data-i18n="wa.label">Chat on WhatsApp</span>
+  </a>
+</div>
 
 <div class="loading" id="loading"><div class="mono" data-i18n="loading">LOADING 3D SCENE…</div></div>
 
@@ -887,7 +892,7 @@ window.IONA3D = (function(){
   }
 
   function makeRoadTanker(){
-    var g=new T.Group();
+    var g=new T.Group(),wheels=[];
     // a touch less mirror than real polished alloy: at this scale a 0.95 metal barrel
     // just reflects the dark sky and reads black
     var alu=new T.MeshStandardMaterial({map:truckTankTex(),metalness:0.62,roughness:0.30});
@@ -901,7 +906,7 @@ window.IONA3D = (function(){
       w.add(new T.Mesh(tg,L.M.tire));
       var rg=new T.CylinderGeometry(0.27,0.27,0.35,14);rg.rotateX(Math.PI/2);
       w.add(new T.Mesh(rg,L.M.rim));
-      w.position.set(x,0.52,z);g.add(w);
+      w.position.set(x,0.52,z);g.add(w);wheels.push(w);   // spun in the act-3 loop
     }
 
     [0.44,-0.44].forEach(function(z){put(bx(11.6,0.24,0.2,blk),-1.1,0.98,z);});   // chassis
@@ -963,23 +968,11 @@ window.IONA3D = (function(){
     });
 
     g.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+    g.userData.wheels=wheels;
     return g;
   }
-  // the loading bay: truck under its gantry, parked in the open lane between tanks
-  (function(){
-    // placed on a sight line that clears every tank between here and the act-1 camera
-    // turned broadside to the act-1 camera, or the cab hides its own barrel
-    var bay=new T.Group();bay.position.set(-2.6,0,11.5);bay.rotation.y=-2.59;
-    bay.scale.setScalar(0.86);act1.add(bay);
-    bay.add(makeRoadTanker());
-    [1.9,-1.9].forEach(function(z){
-      var col=new T.Mesh(new T.CylinderGeometry(0.14,0.14,6.4,12),pipeMat);
-      col.position.set(-2.7,3.2,z);bay.add(col);
-    });
-    var beam=new T.Mesh(new T.BoxGeometry(0.3,0.3,4.2),pipeMat);beam.position.set(-2.7,6.3,0);bay.add(beam);
-    var arm=new T.Mesh(new T.CylinderGeometry(0.11,0.11,2.6,12),pipeMat);   // loading arm
-    arm.position.set(-2.7,5.0,0);arm.rotation.x=0.35;bay.add(arm);
-  })();
+  // the tank farm stays as it was: tanks, pipe rack and sliding flow bands, nothing else.
+  // the road tanker has its own act further down the page.
 
   act1.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
 
@@ -1193,15 +1186,44 @@ window.IONA3D = (function(){
     ship.traverse(function(m){if(m.isMesh&&m!==hull){m.castShadow=true;m.receiveShadow=true;}});
   })();
 
+  /* ================= ACT 3 · ROAD TANKER =================
+     The truck gets its own act, after the ship. It drives with its wheels rolling and the
+     camera tracks it, so the motion is carried by the road dashes, the light masts and the
+     ground grid sweeping past. The drive loops over 60 units — exactly 24 cells of the
+     2.5-unit grid and 12 road dashes — so the wrap lands on identical scenery. */
+  var act3=new T.Group();act3.visible=false;scene.add(act3);
+  var truck3=makeRoadTanker();
+  (function(){
+    truck3.rotation.y=Math.PI;          // heading -X
+    act3.add(truck3);
+    var road=new T.Mesh(new T.BoxGeometry(240,0.06,9),paint(0x0f1216,0.05,0.92));
+    road.position.y=0.02;road.receiveShadow=true;act3.add(road);
+    for(var i=-24;i<=24;i++){                       // dashed centre line
+      var dash=new T.Mesh(new T.BoxGeometry(2.2,0.02,0.16),paint(0x8a8f96,0.1,0.7));
+      dash.position.set(i*5,0.06,0);act3.add(dash);
+    }
+    for(var p=-8;p<=8;p++){                         // light masts to sweep past
+      var mast=new T.Mesh(new T.CylinderGeometry(0.1,0.13,7,10),paint(0x2b333c,0.6,0.5));
+      mast.position.set(p*15,3.5,-7.5);mast.castShadow=true;act3.add(mast);
+      var head=new T.Mesh(new T.BoxGeometry(1.3,0.22,0.5),L.M.dark);
+      head.position.set(p*15+0.55,7.0,-7.5);act3.add(head);
+      var lamp=new T.Mesh(new T.BoxGeometry(0.95,0.08,0.34),L.M.light);
+      lamp.position.set(p*15+0.55,6.86,-7.5);act3.add(lamp);
+    }
+  })();
+
   /* ================= ACT CONTROL ================= */
   var acts=[
     {group:act0, ground:"land", cam:{az:0.7,el:0.16,dist:7.7,ty:1.45}},
     // the original tank-farm framing, restored: tight on the tanks. The loading bay is
     // placed to fit inside it rather than the camera pulling back to accommodate it.
     {group:act1, ground:"land", cam:{az:0.5,el:0.12,dist:34,ty:5.5}},
-    {group:act2, ground:"water",cam:{az:0.95,el:0.13,dist:29,ty:2.1}}
+    {group:act2, ground:"water",cam:{az:0.95,el:0.13,dist:29,ty:2.1}},
+    // az is negative so the camera sits on the same side as the key light at (-9,14,7);
+    // from the opposite side the whole truck reads as a silhouette
+    {group:act3, ground:"land", cam:{az:-0.75,el:0.11,dist:16.5,ty:2.1}}
   ];
-  var caps=[document.getElementById("cap0"),document.getElementById("cap1"),document.getElementById("cap2")];
+  var caps=["cap0","cap1","cap2","cap3"].map(function(id){return document.getElementById(id);});
   var pbar=document.getElementById("pbar");
   var zones=[].map.call(document.querySelectorAll(".zone"),function(el){
     return {el:el,act:parseInt(el.getAttribute("data-act"),10)};
@@ -1209,7 +1231,7 @@ window.IONA3D = (function(){
 
   /* The camera starts pulled back and higher, then glides to the act-0 pose on its
      own: the barrels are framed and moving at load, without touching the scroll. */
-  var camS=reduce?{az:0.7,el:0.16,dist:7.7,ty:1.45}:{az:0.34,el:0.30,dist:12.0,ty:1.75};
+  var camS=reduce?{az:0.7,el:0.16,dist:7.7,ty:1.45,tx:0}:{az:0.34,el:0.30,dist:12.0,ty:1.75,tx:0};
   var camPull=1,camLift=0;            // narrow-frame framing, both set in resize()
 
   function pageP(){var h=document.documentElement;return L.clamp(h.scrollTop/(h.scrollHeight-h.clientHeight),0,1);}
@@ -1250,26 +1272,39 @@ window.IONA3D = (function(){
     // camera target for this act + subtle orbit via local
     var cam=acts[idx].cam;
     var taz=cam.az + (local-0.5)*0.5;
+    // acts 2 and 3 are tracking shots: the target rides along with the ship / the truck
+    var ttx=(idx===3)?truck3.position.x:(idx===2?act2.position.x:0);
     if(idx!==lastIdx){          // act swapped behind a text panel: cut, don't swing
-      camS.az=taz;camS.el=cam.el;camS.dist=cam.dist;camS.ty=cam.ty;lastIdx=idx;
+      camS.az=taz;camS.el=cam.el;camS.dist=cam.dist;camS.ty=cam.ty;camS.tx=ttx;lastIdx=idx;
     }
+    camS.tx=L.lerp(camS.tx,ttx,reduce?1:0.3);
     var k=reduce?1:0.08;
     camS.az=L.lerp(camS.az,taz,k);
     camS.el=L.lerp(camS.el,cam.el,k);
     camS.dist=L.lerp(camS.dist,cam.dist*camPull,k);
     camS.ty=L.lerp(camS.ty,cam.ty+camLift,k);
     var cy=Math.sin(camS.el)*camS.dist+camS.ty, rr=Math.cos(camS.el)*camS.dist;
-    camera.position.set(Math.sin(camS.az)*rr,cy,Math.cos(camS.az)*rr);
-    camera.lookAt(0,camS.ty,0);
+    camera.position.set(camS.tx+Math.sin(camS.az)*rr,cy,Math.cos(camS.az)*rr);
+    camera.lookAt(camS.tx,camS.ty,0);
 
     // per-act internal animation
     if(!reduce){
       // slow turntable. drums standing on the ground shouldn't bob or spin individually
       if(idx===0){act0.rotation.y=t*0.00005;}
       if(idx===1){flowMats.forEach(function(fo){fo.mesh.position.x=((t*0.004+fo.off)%22)-13; });}
+      if(idx===3){                      // drive, wheels rolling without slipping
+        var tx3=30-((t*0.0015)%60);     // travels -X, so the lit front quarter faces us
+        truck3.position.x=tx3;
+        var spin=tx3/0.52;              // sign follows the reversed heading
+        truck3.userData.wheels.forEach(function(w){w.rotation.z=spin;});
+      }
       if(idx===2){if(water.userData.tick)water.userData.tick(t);
-        act2.position.y=Math.sin(t*0.0016)*0.25; act2.rotation.z=Math.sin(t*0.0013)*0.012;
-        act2.position.x=Math.sin(t*0.0005)*2;}
+        // she now makes way instead of bobbing on the spot: the camera tracks her and the
+        // wave field sweeps past. The loop is one wavelength of that field (2π/0.15), so
+        // the wrap lands on identical water.
+        var LW=Math.PI*2/0.15;
+        act2.position.x=LW*0.5-((t*0.0008)%LW);
+        act2.position.y=Math.sin(t*0.0016)*0.25; act2.rotation.z=Math.sin(t*0.0013)*0.012;}
     }
     renderer.render(scene,camera);
   }
@@ -1346,6 +1381,10 @@ window.IONA3D = (function(){
     "a2.eyebrow":"Livraison",
     "a2.h2":"FOB, le monde<br>en manifold.",
     "a2.sub":"Quand il faut bouger le produit, on l'embarque. FOB Rotterdam ou Fujairah, jusqu'à 100&nbsp;000&nbsp;MT en spot, inspection SGS à l'enlèvement.",
+
+    "a3.eyebrow":"Chargement camion",
+    "a3.h2":"Chargé au poste,<br>parti au matin.",
+    "a3.sub":"Pour les volumes régionaux, on charge en citerne routière au poste : conforme ADR, compartiments plombés, ticket de pesée à chaque enlèvement.",
 
     "pr.eyebrow":"Produits",
     "pr.h2":"Ce qu'on<br>fait circuler",
