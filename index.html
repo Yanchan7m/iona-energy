@@ -21,10 +21,13 @@
   .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
   .progress{position:fixed;top:0;left:0;height:2px;width:100%;z-index:60}
   .progress>i{display:block;height:100%;width:0;background:var(--accent)}
+  /* the blend runs on the brand and nav, not the whole bar — it would invert the
+     language pill's colours too */
   .topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;
-    align-items:center;padding:18px clamp(16px,4vw,48px);mix-blend-mode:difference;color:#fff}
-  .brand{font-weight:800;letter-spacing:.26em;font-size:14px}
-  .nav{display:flex;gap:22px;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+    align-items:center;padding:18px clamp(16px,4vw,48px);color:#fff;gap:16px}
+  .brand{font-weight:800;letter-spacing:.26em;font-size:14px;mix-blend-mode:difference}
+  .topright{display:flex;align-items:center;gap:clamp(12px,2vw,24px)}
+  .nav{display:flex;gap:22px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;mix-blend-mode:difference}
   .nav a{color:#fff;text-decoration:none;opacity:.82}.nav a:hover{opacity:1}
   @media(max-width:720px){.nav{display:none}}
 
@@ -61,7 +64,7 @@
   h1{font-size:clamp(42px,8vw,104px)} h2{font-size:clamp(28px,5vw,68px)}
   /* French runs longer than English: a notch down keeps the longest word inside the
      column instead of spilling over the 3D */
-  html[lang="fr"] .cap h1{font-size:clamp(36px,6.2vw,82px)}
+  html[lang="fr"] .cap h1{font-size:clamp(29px,6.2vw,82px)}
   .cap .sub{margin:18px 0 0;color:var(--muted);font-size:clamp(14px,1.5vw,18px);line-height:1.55;max-width:46ch}
   .cap.right .sub{margin-left:auto}
   .pill{display:inline-flex;gap:8px;margin-top:22px;flex-wrap:wrap}
@@ -116,21 +119,44 @@
   .foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-end}
   .foot .big{font-size:clamp(38px,8vw,104px);font-weight:800;letter-spacing:-.03em;line-height:.9}
   .foot .meta{color:var(--muted);font-family:ui-monospace,monospace;font-size:12px;line-height:1.9}
+  .foot .meta a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line);transition:border-color .2s}
+  .foot .meta a:hover{border-bottom-color:var(--accent)}
   .madeby{margin-top:52px;padding-top:22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;
     gap:16px;flex-wrap:wrap;align-items:center;color:var(--muted);font-family:ui-monospace,monospace;font-size:11px;
     letter-spacing:.14em;text-transform:uppercase}
   .madeby a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
   .madeby a:hover{color:var(--accent);border-bottom-color:var(--accent)}
   .madeby .by strong{color:var(--ink);font-weight:700;letter-spacing:.14em}
-  /* floating language switch — bottom right, clear of the centred scroll cue */
-  .lang{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,26px);z-index:70;
-    display:flex;gap:2px;padding:4px;border:1px solid var(--line);border-radius:999px;
+  /* language switch, in the top bar so it is visible from the first screen — and, unlike
+     a fixed element, still visible when the page is embedded in a stretched frame */
+  .lang{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;
     background:rgba(10,14,19,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
     cursor:pointer;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;letter-spacing:.14em}
-  .lang span{padding:6px 11px;border-radius:999px;color:var(--muted);transition:color .2s,background-color .2s}
+  .lang span{padding:5px 10px;border-radius:999px;color:var(--muted);transition:color .2s,background-color .2s}
   .lang span.on{background:var(--accent);color:#0b0f14;font-weight:700}
   .lang:hover span:not(.on){color:var(--ink)}
   .lang:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  /* floating WhatsApp, bottom right, sized and inset responsively */
+  .wa{position:fixed;z-index:72;right:clamp(14px,3vw,28px);
+    bottom:calc(clamp(14px,3vw,26px) + env(safe-area-inset-bottom,0px));
+    width:clamp(48px,4.6vw,58px);height:clamp(48px,4.6vw,58px);border-radius:50%;
+    display:grid;place-items:center;background:#25d366;text-decoration:none;
+    box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .2s;animation:waPulse 3s ease-out infinite}
+  .wa svg{width:56%;height:56%;fill:#fff}
+  .wa:hover{transform:translateY(-2px) scale(1.04)}
+  .wa:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+  @keyframes waPulse{
+    0%{box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 0 rgba(37,211,102,.5)}
+    70%{box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 15px rgba(37,211,102,0)}
+    100%{box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 0 rgba(37,211,102,0)}}
+  .wa-label{position:absolute;right:calc(100% + 12px);white-space:nowrap;background:var(--panel);
+    color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;
+    font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;
+    opacity:0;transform:translateX(6px);pointer-events:none;transition:opacity .2s,transform .2s}
+  .wa:hover .wa-label,.wa:focus-visible .wa-label{opacity:1;transform:none}
+  @media(max-width:720px){.wa-label{display:none}}
+  @media(prefers-reduced-motion:reduce){.wa{animation:none}.wa:hover{transform:none}}
   .loading{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:80;transition:opacity .5s}
   .loading.hide{opacity:0;pointer-events:none}
   .loading .mono{color:var(--muted);letter-spacing:.3em;font-size:12px}
@@ -142,7 +168,12 @@
 <div class="progress"><i id="pbar"></i></div>
 <header class="topbar">
   <div class="brand">IONA·ENERGY</div>
-  <nav class="nav"><a href="#products">Products</a><a href="#procedure">Procedure</a><a href="#hubs">Hubs</a><a href="#contact">Contact</a></nav>
+  <div class="topright">
+    <nav class="nav"><a href="#products">Products</a><a href="#procedure">Procedure</a><a href="#hubs">Hubs</a><a href="#contact">Contact</a></nav>
+    <button class="lang" type="button" aria-label="Passer en français">
+      <span data-l="en">EN</span><span data-l="fr">FR</span>
+    </button>
+  </div>
 </header>
 
 <canvas id="c"></canvas>
@@ -243,9 +274,9 @@
     <div>
       <p class="eyebrow" data-i18n="ft.eyebrow">A clean ticket?</p>
       <div class="big">LET'S<br>TRADE.</div>
-      <a class="cta" href="#" data-i18n="ft.cta">Request the procedure <span class="arrow">→</span></a>
+      <a class="cta" href="mailto:axonecapital@gmail.com?subject=IONA%20ENERGY%20%E2%80%94%20procedure" data-i18n="ft.cta">Request the procedure <span class="arrow">→</span></a>
     </div>
-    <div class="meta" data-i18n="ft.meta">IONA ENERGY<br>Oil products intermediary<br>Rotterdam · Fujairah<br>desk@iona.energy<br><br>© MMXXVI · Demo · Real WebGL 3D</div>
+    <div class="meta" data-i18n="ft.meta">IONA ENERGY<br>Oil products intermediary<br>Rotterdam · Fujairah<br><a href="mailto:axonecapital@gmail.com">axonecapital@gmail.com</a></div>
   </div>
   <div class="madeby">
     <div class="by">Made by <a href="https://axone-capital.com" target="_blank" rel="noopener"><strong>AXONE&nbsp;CAPITAL</strong></a></div>
@@ -253,9 +284,10 @@
   </div></div>
 </footer>
 
-<button class="lang" id="lang" type="button" aria-label="Passer en français">
-  <span data-l="en">EN</span><span data-l="fr">FR</span>
-</button>
+<a class="wa" id="wa" href="https://wa.me/33660687771" target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.05-.52-.099-.148-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  <span class="wa-label" data-i18n="wa.label">Chat on WhatsApp</span>
+</a>
 
 <div class="loading" id="loading"><div class="mono" data-i18n="loading">LOADING 3D SCENE…</div></div>
 
@@ -1234,7 +1266,7 @@ window.IONA3D = (function(){
     camPull=Math.min(1.35,Math.max(1,Math.sqrt(0.95/(w/h))));
     // and raise the look-at point, which drops the subject into the lower half of the
     // frame — in portrait the copy spans the full width and would otherwise sit on it
-    camLift=(w/h<0.95)?0.95:0;}
+    camLift=(w/h<0.95)?1.35:0;}
   addEventListener("resize",function(){resize();computeT();});
 
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});},{threshold:.16});
@@ -1321,8 +1353,9 @@ window.IONA3D = (function(){
 
     "ft.eyebrow":"Un ticket propre ?",
     "ft.cta":'Demander la procédure <span class="arrow">→</span>',
-    "ft.meta":"IONA ENERGY<br>Intermédiaire produits pétroliers<br>Rotterdam · Fujairah<br>desk@iona.energy<br><br>© MMXXVI · Démo · Vraie 3D WebGL",
+    "ft.meta":'IONA ENERGY<br>Intermédiaire produits pétroliers<br>Rotterdam · Fujairah<br><a href="mailto:axonecapital@gmail.com">axonecapital@gmail.com</a>',
 
+    "wa.label":"Écrire sur WhatsApp",
     "loading":"CHARGEMENT DE LA SCÈNE 3D…"
   };
   var META={
@@ -1332,14 +1365,19 @@ window.IONA3D = (function(){
         desc:"Intermédiaire en produits pétroliers : EN590, JET A-1, D6, brut. Rotterdam · Fujairah. Contreparties vérifiées, de l'ICPO au TTT."}
   };
 
+  var WA="33660687771";                      // WhatsApp number, digits only
+  var WATXT={en:"Hello IONA ENERGY, I would like the procedure for a cargo.",
+             fr:"Bonjour IONA ENERGY, je souhaite la procédure pour une cargaison."};
+
   var nodes=[].slice.call(document.querySelectorAll("[data-i18n]"));
   var EN={};nodes.forEach(function(n){EN[n.getAttribute("data-i18n")]=n.innerHTML;});
-  var btn=document.getElementById("lang"),segs=btn.querySelectorAll("[data-l]");
+  var btns=[].slice.call(document.querySelectorAll(".lang"));
   var desc=document.querySelector('meta[name="description"]');
+  var wa=document.getElementById("wa");
   var cur="en";
 
   function apply(lang){
-    var dict=(lang==="fr")?FR:EN,i;
+    var dict=(lang==="fr")?FR:EN;
     nodes.forEach(function(n){
       var v=dict[n.getAttribute("data-i18n")];
       if(v!=null)n.innerHTML=v;
@@ -1347,15 +1385,20 @@ window.IONA3D = (function(){
     document.documentElement.lang=lang;
     document.title=META[lang].title;
     if(desc)desc.setAttribute("content",META[lang].desc);
-    for(i=0;i<segs.length;i++)segs[i].classList.toggle("on",segs[i].getAttribute("data-l")===lang);
-    btn.setAttribute("aria-label",lang==="fr"?"Switch to English":"Passer en français");
+    if(wa)wa.href="https://wa.me/"+WA+"?text="+encodeURIComponent(WATXT[lang]);
+    btns.forEach(function(b){
+      [].forEach.call(b.querySelectorAll("[data-l]"),function(s){
+        s.classList.toggle("on",s.getAttribute("data-l")===lang);
+      });
+      b.setAttribute("aria-label",lang==="fr"?"Switch to English":"Passer en français");
+    });
     try{localStorage.setItem("iona.lang",lang);}catch(e){}
     cur=lang;
   }
 
   try{var saved=localStorage.getItem("iona.lang");if(saved==="fr"||saved==="en")cur=saved;}catch(e){}
   apply(cur);
-  btn.addEventListener("click",function(){apply(cur==="fr"?"en":"fr");});
+  btns.forEach(function(b){b.addEventListener("click",function(){apply(cur==="fr"?"en":"fr");});});
 })();
 </script>
 
