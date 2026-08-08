@@ -59,12 +59,23 @@ PROMPT.md    # prompt de génération pour la version framework (Next.js/R3F)
   pétrolier → Hubs (Rotterdam · Fujairah) → contact.
 - Les barils sont **à l'écran et animés dès le chargement** : la caméra fait son
   travelling d'entrée toute seule, sans attendre le premier scroll.
+- **Bilingue** : anglais par défaut, bouton flottant EN / FR en bas à droite, choix
+  retenu d'une visite à l'autre.
 - Thème sombre, responsive, `prefers-reduced-motion` respecté.
 
 ## Personnaliser
 
 - Couleurs : variables CSS en haut de `index.html` (`--accent`, `--ink`…).
-- Textes : directement dans le HTML des sections.
+- Textes : **l'anglais se modifie directement dans le HTML** (c'est la langue par
+  défaut, et la seule que voient les moteurs de recherche). Le français vit dans
+  l'objet `FR` du dernier `<script>`, indexé par les attributs `data-i18n`. Pour
+  ajouter une phrase traduisible : `data-i18n="ma.cle"` sur l'élément, et une entrée
+  `"ma.cle"` dans `FR`. L'anglais est relevé depuis le DOM au chargement, donc il n'y
+  a jamais deux versions de l'anglais à garder synchronisées.
+- Barils : `drumProfile` donne le profil du fût (jantes roulées, cerces) tourné par
+  `LatheGeometry`, et `drumMaps` peint les quatre cartes (couleur, rugosité,
+  métalness, normale) sur des canvas — aucune texture externe. `bcols` liste les
+  produits, leur couleur et leur code UN.
 - 3D : les fonctions `makeBarrel`, `makeTank`, l'acte pétrolier et les poses
   caméra sont dans le `<script>` en bas de `index.html`.
 - Rythme du scroll : un seul `<canvas>` en `position:fixed` derrière la page, et
