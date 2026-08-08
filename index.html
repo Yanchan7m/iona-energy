@@ -1,10 +1,17 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IONA ENERGY — Oil trading intermediary</title>
-<meta name="description" content="Site d'intermédiaire pétrolier : 3 scènes 3D (barils EN590, parc Vopak, pétrolier FOB).">
+<meta name="description" content="Oil products intermediary: EN590, JET A-1, D6, crude. Rotterdam · Fujairah. Vetted counterparties, ICPO to TTT.">
+<link rel="canonical" href="https://iona.axone-capital.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="IONA ENERGY">
+<meta property="og:title" content="IONA ENERGY — Oil trading intermediary">
+<meta property="og:description" content="Oil products intermediary — EN590, JET A-1, D6, Crude. Rotterdam · Fujairah.">
+<meta property="og:url" content="https://iona.axone-capital.com/">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root{--bg:#07090c;--bg2:#0b0f14;--panel:#10151c;--ink:#eef1f4;--muted:#8b97a3;--line:#1e2732;
         --accent:#f0a000;--accent2:#12b886;--hot:#ff5a1f}
@@ -21,20 +28,40 @@
   .nav a{color:#fff;text-decoration:none;opacity:.82}.nav a:hover{opacity:1}
   @media(max-width:720px){.nav{display:none}}
 
-  /* 3D stage: one sticky canvas, 3 acts driven by scroll */
-  .stage3d{position:relative;height:420vh}
-  .sticky{position:sticky;top:0;height:100vh;overflow:hidden}
-  canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .fade{position:absolute;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:4}
+  /* 3D: one fixed canvas sits behind the whole page. Three scroll zones drive the
+     three acts; each zone is followed by an opaque text panel that scrolls over
+     the canvas, so text and animation alternate all the way down. */
+  /* --vh is one screen. it defaults to 100vh and is only overridden when the page is
+     embedded in a frame that was grown to the content height — there innerHeight is
+     many screens tall, and raw vh units would blow the scenes up. see stageH(). */
+  :root{--vh:100vh}
+  canvas#c{position:fixed;top:0;left:0;width:100%;height:var(--vh);display:block;z-index:0}
+  .zone{position:relative;z-index:1;height:calc(var(--vh)*1.8)}
+  .zsticky{position:sticky;top:0;height:var(--vh);overflow:hidden}
   .cap{position:absolute;z-index:6;pointer-events:none;left:clamp(16px,6vw,80px);max-width:620px;
     top:50%;transform:translateY(-50%);opacity:0;will-change:opacity,transform}
   .cap.right{left:auto;right:clamp(16px,6vw,80px);text-align:right}
+  /* soft scrim in the page's own ground colour: the copy now sits over the 3D at full
+     opacity, and the tanks and the sea are both bright enough to swallow grey text */
+  /* the gradient must reach zero alpha inside its own box, or the box edge shows as a
+     straight line over the 3D — hence radii of exactly 50% and the generous insets */
+  .cap::before{content:"";position:absolute;inset:-150px -240px;z-index:-1;pointer-events:none;
+    background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.95),rgba(7,9,12,.78) 42%,rgba(7,9,12,.32) 72%,rgba(7,9,12,0) 100%)}
+  /* on a narrow frame the copy spans the width, so keep the scrim tight to the text —
+     a full-width halo would dim the whole scene */
+  @media(max-width:720px){
+    .cap::before{inset:-96px -40px;
+      background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.93),rgba(7,9,12,.74) 44%,rgba(7,9,12,.28) 74%,rgba(7,9,12,0) 100%)}
+  }
   .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);
     display:inline-flex;align-items:center;gap:10px;margin:0 0 18px}
   .eyebrow::before{content:"";width:26px;height:1px;background:var(--accent)}
   .cap.right .eyebrow{flex-direction:row-reverse}
   h1,h2{margin:0;font-weight:800;line-height:.94;letter-spacing:-.02em;text-transform:uppercase;text-wrap:balance}
   h1{font-size:clamp(42px,8vw,104px)} h2{font-size:clamp(28px,5vw,68px)}
+  /* French runs longer than English: a notch down keeps the longest word inside the
+     column instead of spilling over the 3D */
+  html[lang="fr"] .cap h1{font-size:clamp(36px,6.2vw,82px)}
   .cap .sub{margin:18px 0 0;color:var(--muted);font-size:clamp(14px,1.5vw,18px);line-height:1.55;max-width:46ch}
   .cap.right .sub{margin-left:auto}
   .pill{display:inline-flex;gap:8px;margin-top:22px;flex-wrap:wrap}
@@ -46,7 +73,9 @@
   @keyframes cue{0%,100%{opacity:.25;transform:scaleY(.5)}50%{opacity:1;transform:scaleY(1)}}
 
   .wrap{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
-  .section{padding:clamp(80px,13vh,150px) 0}
+  /* text panels ride above the fixed canvas and must be opaque to cover it */
+  .section{padding:clamp(80px,13vh,150px) 0;position:relative;z-index:2;background:var(--bg)}
+  #procedure{background:var(--bg2)}
   .reveal{opacity:0;transform:translateY(30px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
   .reveal.in{opacity:1;transform:none}.reveal.d1{transition-delay:.07s}.reveal.d2{transition-delay:.14s}.reveal.d3{transition-delay:.21s}
   .lead{color:var(--muted);font-size:clamp(16px,1.9vw,20px);line-height:1.55;max-width:64ch}
@@ -82,10 +111,26 @@
   .cta:hover{transform:translateY(-2px)}.cta .arrow{transition:transform .2s}.cta:hover .arrow{transform:translateX(4px)}
   .note{margin-top:28px;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:10px;
     background:var(--panel);color:var(--muted);font-size:13.5px;line-height:1.55;max-width:70ch}
-  footer{border-top:1px solid var(--line);padding:60px 0 48px;margin-top:20px}
+  footer{border-top:1px solid var(--line);padding:60px 0 48px;margin-top:20px;
+    position:relative;z-index:2;background:var(--bg)}
   .foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-end}
   .foot .big{font-size:clamp(38px,8vw,104px);font-weight:800;letter-spacing:-.03em;line-height:.9}
   .foot .meta{color:var(--muted);font-family:ui-monospace,monospace;font-size:12px;line-height:1.9}
+  .madeby{margin-top:52px;padding-top:22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;align-items:center;color:var(--muted);font-family:ui-monospace,monospace;font-size:11px;
+    letter-spacing:.14em;text-transform:uppercase}
+  .madeby a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
+  .madeby a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+  .madeby .by strong{color:var(--ink);font-weight:700;letter-spacing:.14em}
+  /* floating language switch — bottom right, clear of the centred scroll cue */
+  .lang{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vw,26px);z-index:70;
+    display:flex;gap:2px;padding:4px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(10,14,19,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    cursor:pointer;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;letter-spacing:.14em}
+  .lang span{padding:6px 11px;border-radius:999px;color:var(--muted);transition:color .2s,background-color .2s}
+  .lang span.on{background:var(--accent);color:#0b0f14;font-weight:700}
+  .lang:hover span:not(.on){color:var(--ink)}
+  .lang:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   .loading{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:80;transition:opacity .5s}
   .loading.hide{opacity:0;pointer-events:none}
   .loading .mono{color:var(--muted);letter-spacing:.3em;font-size:12px}
@@ -100,33 +145,19 @@
   <nav class="nav"><a href="#products">Products</a><a href="#procedure">Procedure</a><a href="#hubs">Hubs</a><a href="#contact">Contact</a></nav>
 </header>
 
-<section class="stage3d" id="stage">
-  <div class="sticky">
-    <canvas id="c"></canvas>
-    <div class="fade" id="fade"></div>
+<canvas id="c"></canvas>
 
+<!-- ACT 0 · barrels — on screen and animating the moment the page loads -->
+<section class="zone" id="zone0" data-act="0">
+  <div class="zsticky">
     <div class="cap" id="cap0">
-      <p class="eyebrow mono">Oil trading · Intermédiaire</p>
-      <h1>We move oil,<br>cleanly.</h1>
-      <p class="sub">Nous relions acheteurs et vendeurs vérifiés sur les produits raffinés — EN590 en tête —
-      avec une procédure carrée : KYC, POP, SGS. Rien de flou.</p>
+      <p class="eyebrow mono" data-i18n="hero.eyebrow">Oil trading · Intermediary</p>
+      <h1 data-i18n="hero.h1">We move oil,<br>cleanly.</h1>
+      <p class="sub" data-i18n="hero.sub">We connect vetted buyers and sellers on refined products — EN590 first —
+      with a procedure that holds: KYC, POP, SGS. Nothing vague.</p>
       <div class="pill"><span>EN590 10&nbsp;PPM</span><span>SPOT &amp; CONTRACT</span><span>ROTTERDAM · FUJAIRAH</span></div>
     </div>
-
-    <div class="cap right" id="cap1">
-      <p class="eyebrow mono">Tank farm</p>
-      <h2>Vopak to Vopak.<br>Tank to tank.</h2>
-      <p class="sub">Transfert de titre en cuve, sans mouvement physique inutile. TTT / TTV sur les tank farms
-      de Rotterdam et Fujairah — Dip Test et Dip&nbsp;and&nbsp;Pay à l'appui.</p>
-    </div>
-
-    <div class="cap" id="cap2">
-      <p class="eyebrow mono">Livraison</p>
-      <h2>FOB, le monde<br>en manifold.</h2>
-      <p class="sub">Quand il faut bouger le produit, on l'embarque. FOB Rotterdam ou Fujairah, jusqu'à
-      100&nbsp;000&nbsp;MT en spot, inspection SGS à l'enlèvement.</p>
-    </div>
-    <div class="scroll-cue">Scroll<span></span></div>
+    <div class="scroll-cue" data-i18n="cue">Scroll<span></span></div>
   </div>
 </section>
 
@@ -134,51 +165,75 @@
   <div class="wrap">
     <div class="sechead">
       <div>
-        <p class="eyebrow reveal">Produits</p>
-        <h2 class="reveal d1">Ce qu'on<br>fait circuler</h2>
+        <p class="eyebrow reveal" data-i18n="pr.eyebrow">Products</p>
+        <h2 class="reveal d1" data-i18n="pr.h2">What we<br>keep moving</h2>
       </div>
-      <p class="lead reveal d2">Produits raffinés et bruts, origines documentées, hors sanctions. On ne travaille
-      qu'avec des tickets propres.</p>
+      <p class="lead reveal d2" data-i18n="pr.lead">Refined products and crude, documented origins, sanctions-free. We only
+      work clean tickets.</p>
     </div>
     <div class="cards">
-      <div class="card reveal"><span class="k">DIESEL</span><h3>EN590 10 ppm</h3><p>Le plus demandé. Ultra-low sulphur, spec ISO. Spot ou contrat.</p><div class="spec mono">Vopak · Rotterdam / Fujairah</div></div>
-      <div class="card reveal d1"><span class="k">AVIATION</span><h3>JET A-1</h3><p>Kérosène aviation, certificats de qualité et batch récents.</p><div class="spec mono">CIF / FOB · ADP</div></div>
-      <div class="card reveal d2"><span class="k">GASOIL</span><h3>D2 / D6</h3><p>Gasoil et virgin fuel oil D6 pour utilities et bunkering.</p><div class="spec mono">TTT / TTO</div></div>
-      <div class="card reveal"><span class="k">BRUT</span><h3>Crude &amp; REBCO</h3><p>Bruts sur origines vérifiées, papiers complets, chaîne de titre claire.</p><div class="spec mono">CIF ASWP</div></div>
-      <div class="card reveal d1"><span class="k">GAZ</span><h3>LPG / LNG</h3><p>Cargaisons gaz, allocation portuaire confirmée avant offre.</p><div class="spec mono">FOB · Spot</div></div>
-      <div class="card reveal d2"><span class="k">BITUME</span><h3>Bitumen 60/70</h3><p>Pour infrastructure, conditionné ou en vrac chauffé.</p><div class="spec mono">CFR</div></div>
+      <div class="card reveal"><span class="k">DIESEL</span><h3>EN590 10 ppm</h3><p data-i18n="pr.c1">The most requested. Ultra-low sulphur, ISO spec. Spot or contract.</p><div class="spec mono">Vopak · Rotterdam / Fujairah</div></div>
+      <div class="card reveal d1"><span class="k">AVIATION</span><h3>JET A-1</h3><p data-i18n="pr.c2">Aviation kerosene, recent quality and batch certificates.</p><div class="spec mono">CIF / FOB · ADP</div></div>
+      <div class="card reveal d2"><span class="k">GASOIL</span><h3>D2 / D6</h3><p data-i18n="pr.c3">Gasoil and D6 virgin fuel oil for utilities and bunkering.</p><div class="spec mono">TTT / TTO</div></div>
+      <div class="card reveal"><span class="k" data-i18n="pr.k4">CRUDE</span><h3>Crude &amp; REBCO</h3><p data-i18n="pr.c4">Crude on verified origins, complete papers, clear chain of title.</p><div class="spec mono">CIF ASWP</div></div>
+      <div class="card reveal d1"><span class="k" data-i18n="pr.k5">GAS</span><h3>LPG / LNG</h3><p data-i18n="pr.c5">Gas cargoes, port allocation confirmed before any offer.</p><div class="spec mono">FOB · Spot</div></div>
+      <div class="card reveal d2"><span class="k" data-i18n="pr.k6">BITUMEN</span><h3>Bitumen 60/70</h3><p data-i18n="pr.c6">For infrastructure, drummed or hot in bulk.</p><div class="spec mono">CFR</div></div>
     </div>
   </div>
 </section>
 
-<section class="section" id="procedure" style="background:var(--bg2)">
+<!-- ACT 1 · tank farm -->
+<section class="zone" id="zone1" data-act="1">
+  <div class="zsticky">
+    <div class="cap right" id="cap1">
+      <p class="eyebrow mono" data-i18n="a1.eyebrow">Tank farm</p>
+      <h2 data-i18n="a1.h2">Vopak to Vopak.<br>Tank to tank.</h2>
+      <p class="sub" data-i18n="a1.sub">Title transfer in tank, with no pointless physical movement. TTT / TTV on the
+      Rotterdam and Fujairah tank farms — backed by Dip Test and Dip&nbsp;and&nbsp;Pay.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="procedure">
   <div class="wrap">
     <div class="sechead">
-      <div><p class="eyebrow reveal">Procédure</p><h2 class="reveal d1">Une transaction<br>sans surprise</h2></div>
-      <p class="lead reveal d2">La séquence que nous suivons — celle qui protège les deux parties avant qu'un
-      euro ne bouge.</p>
+      <div><p class="eyebrow reveal" data-i18n="pc.eyebrow">Procedure</p><h2 class="reveal d1" data-i18n="pc.h2">A transaction<br>with no surprises</h2></div>
+      <p class="lead reveal d2" data-i18n="pc.lead">The sequence we follow — the one that protects both sides before a single
+      euro moves.</p>
     </div>
     <div class="steps">
-      <div class="step reveal"><div class="no">01</div><h4>Engagement &amp; KYC</h4><p>Acheteur émet son ICPO. On échange CIS, POF et due diligence des deux côtés — on sait à qui on parle.</p><div class="tags"><b>ICPO</b><b>CIS</b><b>POF</b><b>DD</b></div></div>
-      <div class="step reveal d1"><div class="no">02</div><h4>Offre &amp; contrat</h4><p>Soft Corporate Offer, puis contrat SPA. Produit, quantité (MT), incoterm et tank farm actés.</p><div class="tags"><b>SCO</b><b>SPA</b><b>SPOT</b><b>FOB</b></div></div>
-      <div class="step reveal d2"><div class="no">03</div><h4>Preuve produit</h4><p>Proof of Product et reçu de cuve Vopak. Origine documentée, conforme sanctions.</p><div class="tags"><b>POP</b><b>TSR</b><b>IMO</b></div></div>
-      <div class="step reveal"><div class="no">04</div><h4>Inspection</h4><p>L'acheteur mène son SGS / Dip Test à la cuve avant tout paiement. Résultat = vérité.</p><div class="tags"><b>SGS</b><b>DIP TEST</b><b>UDTA</b></div></div>
-      <div class="step reveal d1"><div class="no">05</div><h4>Transfert &amp; paiement</h4><p>Dip and Pay : tank-to-tank (TTT) sur confirmation. Paiement contre transfert de titre.</p><div class="tags"><b>TTT</b><b>V2V</b><b>DIP&amp;PAY</b></div></div>
-      <div class="step reveal d2"><div class="no">06</div><h4>Titre &amp; suite</h4><p>Titre transféré, cargaison à l'acheteur. On garde la ligne ouverte pour le prochain lot.</p><div class="tags"><b>TITLE</b><b>ROLLS &amp; EXT.</b></div></div>
+      <div class="step reveal"><div class="no">01</div><h4 data-i18n="pc.t1">Engagement &amp; KYC</h4><p data-i18n="pc.p1">The buyer issues its ICPO. We exchange CIS, POF and due diligence both ways — we know who we are dealing with.</p><div class="tags"><b>ICPO</b><b>CIS</b><b>POF</b><b>DD</b></div></div>
+      <div class="step reveal d1"><div class="no">02</div><h4 data-i18n="pc.t2">Offer &amp; contract</h4><p data-i18n="pc.p2">Soft Corporate Offer, then the SPA contract. Product, quantity (MT), incoterm and tank farm agreed.</p><div class="tags"><b>SCO</b><b>SPA</b><b>SPOT</b><b>FOB</b></div></div>
+      <div class="step reveal d2"><div class="no">03</div><h4 data-i18n="pc.t3">Proof of product</h4><p data-i18n="pc.p3">Proof of Product and Vopak tank receipt. Documented origin, sanctions-compliant.</p><div class="tags"><b>POP</b><b>TSR</b><b>IMO</b></div></div>
+      <div class="step reveal"><div class="no">04</div><h4 data-i18n="pc.t4">Inspection</h4><p data-i18n="pc.p4">The buyer runs its own SGS / Dip Test at the tank before any payment. The result is the truth.</p><div class="tags"><b>SGS</b><b>DIP TEST</b><b>UDTA</b></div></div>
+      <div class="step reveal d1"><div class="no">05</div><h4 data-i18n="pc.t5">Transfer &amp; payment</h4><p data-i18n="pc.p5">Dip and Pay: tank-to-tank (TTT) on confirmation. Payment against transfer of title.</p><div class="tags"><b>TTT</b><b>V2V</b><b>DIP&amp;PAY</b></div></div>
+      <div class="step reveal d2"><div class="no">06</div><h4 data-i18n="pc.t6">Title &amp; what follows</h4><p data-i18n="pc.p6">Title transferred, cargo to the buyer. We keep the line open for the next lot.</p><div class="tags"><b>TITLE</b><b>ROLLS &amp; EXT.</b></div></div>
     </div>
-    <div class="note mono">Conformité d'abord : origines documentées, aucune cargaison sous sanctions, KYC complet des deux côtés. Un ticket propre vaut mieux qu'un deal rapide.</div>
+    <div class="note mono" data-i18n="pc.note">Compliance first: documented origins, no cargo under sanctions, full KYC on both sides. A clean ticket beats a fast deal.</div>
+  </div>
+</section>
+
+<!-- ACT 2 · tanker -->
+<section class="zone" id="zone2" data-act="2">
+  <div class="zsticky">
+    <div class="cap" id="cap2">
+      <p class="eyebrow mono" data-i18n="a2.eyebrow">Delivery</p>
+      <h2 data-i18n="a2.h2">FOB, the world<br>at the manifold.</h2>
+      <p class="sub" data-i18n="a2.sub">When the product has to move, we load it. FOB Rotterdam or Fujairah, up to
+      100,000&nbsp;MT spot, SGS inspection at lifting.</p>
+    </div>
   </div>
 </section>
 
 <section class="section" id="hubs">
   <div class="wrap">
-    <div class="sechead"><div><p class="eyebrow reveal">Chiffres</p><h2 class="reveal d1">Deux hubs,<br>un réseau</h2></div>
-    <p class="lead reveal d2">Nous opérons là où le produit est : les grands tank farms européens et du Golfe.</p></div>
+    <div class="sechead"><div><p class="eyebrow reveal" data-i18n="hb.eyebrow">Figures</p><h2 class="reveal d1" data-i18n="hb.h2">Two hubs,<br>one network</h2></div>
+    <p class="lead reveal d2" data-i18n="hb.lead">We operate where the product is: the major European and Gulf tank farms.</p></div>
     <div class="stats reveal d2">
       <div class="stat"><div class="n" data-to="100" data-suffix="k">0</div><div class="l">MT / spot max</div></div>
       <div class="stat"><div class="n" data-to="2">0</div><div class="l">Hubs · RTM / FUJ</div></div>
       <div class="stat"><div class="n" data-to="10" data-suffix=" ppm">0</div><div class="l">EN590 sulphur</div></div>
-      <div class="stat"><div class="n" data-to="100" data-suffix="%">0</div><div class="l">KYC / conforme</div></div>
+      <div class="stat"><div class="n" data-to="100" data-suffix="%">0</div><div class="l" data-i18n="hb.s4">KYC / compliant</div></div>
     </div>
   </div>
 </section>
@@ -186,15 +241,23 @@
 <footer id="contact">
   <div class="wrap"><div class="foot">
     <div>
-      <p class="eyebrow">Un ticket propre ?</p>
+      <p class="eyebrow" data-i18n="ft.eyebrow">A clean ticket?</p>
       <div class="big">LET'S<br>TRADE.</div>
-      <a class="cta" href="#">Demander la procédure <span class="arrow">→</span></a>
+      <a class="cta" href="#" data-i18n="ft.cta">Request the procedure <span class="arrow">→</span></a>
     </div>
-    <div class="meta">IONA ENERGY<br>Intermédiaire produits pétroliers<br>Rotterdam · Fujairah<br>desk@iona.energy<br><br>© MMXXVI · Démo · Vraie 3D WebGL</div>
+    <div class="meta" data-i18n="ft.meta">IONA ENERGY<br>Oil products intermediary<br>Rotterdam · Fujairah<br>desk@iona.energy<br><br>© MMXXVI · Demo · Real WebGL 3D</div>
+  </div>
+  <div class="madeby">
+    <div class="by">Made by <a href="https://axone-capital.com" target="_blank" rel="noopener"><strong>AXONE&nbsp;CAPITAL</strong></a></div>
+    <div class="dom">iona.axone-capital.com</div>
   </div></div>
 </footer>
 
-<div class="loading" id="loading"><div class="mono">CHARGEMENT DE LA SCÈNE 3D…</div></div>
+<button class="lang" id="lang" type="button" aria-label="Passer en français">
+  <span data-l="en">EN</span><span data-l="fr">FR</span>
+</button>
+
+<div class="loading" id="loading"><div class="mono" data-i18n="loading">LOADING 3D SCENE…</div></div>
 
 <script>/**
  * @license
@@ -464,49 +527,244 @@ window.IONA3D = (function(){
   /* water (act 2) */
   var water=L.water(scene);water.visible=false;
 
-  /* ================= ACT 0 · BARRELS ================= */
-  function barrelTex(base,label){
-    var c=cv(512,256),x=c.getContext("2d");
-    x.fillStyle=base;x.fillRect(0,0,512,256);
-    // subtle vertical sheen
-    var gr=x.createLinearGradient(0,0,512,0);gr.addColorStop(0,"rgba(255,255,255,.10)");gr.addColorStop(.5,"rgba(0,0,0,.10)");gr.addColorStop(1,"rgba(255,255,255,.06)");
-    x.fillStyle=gr;x.fillRect(0,0,512,256);
-    // rib bands
-    x.fillStyle="rgba(0,0,0,.28)";[70,186].forEach(function(y){x.fillRect(0,y,512,16);});
-    // hazard/label band
-    x.fillStyle="#0e1116";x.fillRect(0,108,512,60);
-    x.fillStyle=label.color||"#f0a000";x.font="bold 40px ui-monospace,monospace";x.fillText(label.big||"EN590",26,150);
-    x.fillStyle="#cfd6de";x.font="16px ui-monospace,monospace";x.fillText(label.small||"ULSD 10 PPM · ISO 8217",210,146);
-    x.fillStyle="#ffffff";x.font="bold 22px Helvetica,Arial";x.fillText("IONA ENERGY",300,235);
-    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;return t;
+  /* ================= ACT 0 · BARRELS =================
+     A 208 L steel drum built like the real object: rolled chimes top and bottom, two
+     rolling hoops, recessed heads, two bungs. The shell is a lathe of that profile, so
+     the silhouette reads as pressed steel rather than a cylinder with rings stuck on
+     it. The painted-steel surface comes from four procedural maps — colour, roughness,
+     metalness, normal — all drawn on canvas, so the page stays asset-free. */
+  var DRUM_R=0.55, DRUM_H=1.62;      // Ø1.10 × 1.62 — the real 208 L proportion
+
+  function drumProfile(){
+    var r=DRUM_R,H=DRUM_H,p=[],i,a;
+    function lin(x,y){p.push(new T.Vector2(x,y));}
+    function roll(y,rad){            // a rolled hoop, centred on y, proud of the wall
+      for(i=0;i<=8;i++){a=-Math.PI/2+Math.PI*i/8;lin(r-0.012+Math.cos(a)*rad,y+Math.sin(a)*rad);}
+    }
+    lin(r-0.085,0.002);
+    roll(0.048,0.046);               // bottom chime
+    lin(r-0.012,0.13);
+    roll(H*0.35,0.040);              // rolling hoop 1
+    lin(r-0.012,H*0.5);
+    roll(H*0.65,0.040);              // rolling hoop 2
+    lin(r-0.012,H-0.13);
+    roll(H-0.048,0.046);             // top chime
+    lin(r-0.085,H-0.002);
+    return p;
   }
-  function makeBarrel(base,label){
-    var g=new T.Group();
-    var side=new T.MeshStandardMaterial({map:barrelTex(base,label||{}),metalness:0.55,roughness:0.42});
-    var cap=paint(new T.Color(base).multiplyScalar(0.85).getHex(),0.6,0.4);
-    var body=new T.Mesh(new T.CylinderGeometry(0.55,0.55,1.5,36,1,false),[side,cap,cap]);
-    body.castShadow=true;body.receiveShadow=true;g.add(body);
-    // rims + ribs
-    var ring=paint(new T.Color(base).multiplyScalar(0.7).getHex(),0.7,0.35);
-    [-0.72,-0.28,0.28,0.72].forEach(function(y){var r=new T.Mesh(new T.TorusGeometry(0.555,0.035,8,36),ring);r.rotation.x=Math.PI/2;r.position.y=y;r.castShadow=true;g.add(r);});
-    // bung on top
-    var b=new T.Mesh(new T.CylinderGeometry(0.09,0.09,0.06,12),L.M.chrome);b.position.set(0.28,0.77,0.1);g.add(b);
+
+  /* LatheGeometry runs v on the point index, so the tightly-spaced rim points would
+     squash the label into the hoops. Rebuild v from real distance along the profile. */
+  var SHELL=(function(){
+    var p=drumProfile(),n=p.length,cum=[0],d=0,j,seg=72;
+    for(j=1;j<n;j++){d+=p[j].distanceTo(p[j-1]);cum.push(d);}
+    for(j=0;j<n;j++)cum[j]/=d;
+    var geo=new T.LatheGeometry(p,seg),uv=geo.attributes.uv;
+    for(var i=0;i<=seg;i++)for(j=0;j<n;j++)uv.setY(i*n+j,cum[j]);
+    uv.needsUpdate=true;
+    return {geo:geo, vAt:function(y){       // v of a height, to place marks on features
+      var best=0,bd=1e9;for(var k=0;k<n;k++){var dd=Math.abs(p[k].y-y);if(dd<bd){bd=dd;best=k;}}
+      return cum[best];}};
+  })();
+
+  /* Turn a grey height field into a tangent-space normal map (central differences). */
+  function normalFromHeight(hc,strength){
+    var w=hc.width,h=hc.height,src=hc.getContext("2d").getImageData(0,0,w,h).data;
+    var out=cv(w,h),ox=out.getContext("2d"),img=ox.createImageData(w,h),d=img.data;
+    function at(X,Y){X=(X+w)%w;Y=Y<0?0:(Y>=h?h-1:Y);return src[(Y*w+X)*4]/255;}
+    for(var y=0;y<h;y++)for(var x=0;x<w;x++){
+      var dx=(at(x+1,y)-at(x-1,y))*strength,dy=(at(x,y+1)-at(x,y-1))*strength;
+      var l=Math.sqrt(dx*dx+dy*dy+1),i=(y*w+x)*4;
+      d[i]=(-dx/l*0.5+0.5)*255;d[i+1]=(-dy/l*0.5+0.5)*255;d[i+2]=(1/l*0.5+0.5)*255;d[i+3]=255;
+    }
+    ox.putImageData(img,0,0);
+    var t=new T.CanvasTexture(out);t.anisotropy=8;return t;   // stays linear: it's a normal map
+  }
+
+  // v-window between the two hoops, where the printed band goes
+  var LBL_A=SHELL.vAt(DRUM_H*0.35+0.055), LBL_B=SHELL.vAt(DRUM_H*0.65-0.055);
+
+  var drumCache={};
+  function drumMaps(base,spec){
+    var key=base+"|"+spec.big;if(drumCache[key])return drumCache[key];
+    var W=1024,H=512,i,y,r2;
+    var cc=cv(W,H),x=cc.getContext("2d");                    // colour
+    var hc=cv(512,256),hx=hc.getContext("2d");               // height → normal
+    var rc=cv(512,256),rx=rc.getContext("2d");               // roughness
+    var mc=cv(512,256),mx=mc.getContext("2d");               // metalness
+    function cy(v,hh){return (1-v)*(hh||H);}                 // v=0 is the drum's base
+    function bandY(y0,y1,hh){var a=cy(SHELL.vAt(y1),hh),b=cy(SHELL.vAt(y0),hh);return [a,b-a];}
+
+    /* ---- colour: enamel over steel, brushed, then worked ---- */
+    x.fillStyle=base;x.fillRect(0,0,W,H);
+    for(i=0;i<520;i++){                    // faint rolling grain — enamel, not brushed metal
+      x.fillStyle=(i%2?"rgba(255,255,255,":"rgba(0,0,0,")+(0.006+Math.random()*0.014)+")";
+      x.fillRect(Math.random()*W,0,0.6+Math.random()*1.6,H);
+    }
+    var sheen=x.createLinearGradient(0,0,W,0);               // one soft lit side
+    sheen.addColorStop(0,"rgba(255,255,255,.05)");sheen.addColorStop(.28,"rgba(255,255,255,.13)");
+    sheen.addColorStop(.6,"rgba(0,0,0,.10)");sheen.addColorStop(1,"rgba(255,255,255,.04)");
+    x.fillStyle=sheen;x.fillRect(0,0,W,H);
+    [[0.048,0.046],[DRUM_H*0.35,0.040],[DRUM_H*0.65,0.040],[DRUM_H-0.048,0.046]].forEach(function(f){
+      var b=bandY(f[0]-f[1],f[0]+f[1]);                      // grime in the rolled crevices
+      var g=x.createLinearGradient(0,b[0],0,b[0]+b[1]);
+      g.addColorStop(0,"rgba(0,0,0,.34)");g.addColorStop(.5,"rgba(255,255,255,.10)");g.addColorStop(1,"rgba(0,0,0,.34)");
+      x.fillStyle=g;x.fillRect(0,b[0],W,b[1]);
+    });
+    var foot=x.createLinearGradient(0,H,0,H-70);             // dirt gathering at the foot
+    foot.addColorStop(0,"rgba(0,0,0,.5)");foot.addColorStop(1,"rgba(0,0,0,0)");
+    x.fillStyle=foot;x.fillRect(0,H-70,W,70);
+
+    /* ---- the printed band, between the hoops ---- */
+    var lb=[cy(LBL_B),cy(LBL_A)-cy(LBL_B)];
+    x.fillStyle="#0d1015";x.fillRect(0,lb[0],W,lb[1]);
+    x.fillStyle="rgba(255,255,255,.07)";x.fillRect(0,lb[0],W,2);
+    var midY=lb[0]+lb[1]*0.5;
+    x.fillStyle=spec.color;x.font="bold 62px ui-monospace,monospace";x.textBaseline="middle";
+    x.fillText(spec.big,48,midY-14);
+    x.fillStyle="#c3ccd6";x.font="24px ui-monospace,monospace";
+    x.fillText(spec.small,50,midY+30);
+    x.fillStyle="#8d98a4";x.font="20px ui-monospace,monospace";
+    x.fillText(spec.un+"  ·  1A1/Y1.4/150",470,midY+30);     // UN number + packaging code
+    x.fillStyle="#eef1f4";x.font="bold 40px Helvetica,Arial";
+    x.fillText("IONA ENERGY",470,midY-16);
+    // class 3 placard, on the far side of the drum
+    (function(){
+      var cx=880,cyy=midY,s=46;
+      x.save();x.translate(cx,cyy);x.rotate(Math.PI/4);
+      x.fillStyle="#c0392b";x.fillRect(-s/2,-s/2,s,s);
+      x.strokeStyle="rgba(255,255,255,.85)";x.lineWidth=2;x.strokeRect(-s/2+4,-s/2+4,s-8,s-8);
+      x.restore();
+      x.fillStyle="#ffffff";x.font="bold 20px Helvetica,Arial";x.textAlign="center";
+      x.fillText("3",cx,cyy+18);x.textAlign="left";
+    })();
+    // chipped paint at the chimes, bare steel showing through
+    for(i=0;i<130;i++){
+      var band=Math.random()<0.5?bandY(0.002,0.10):bandY(DRUM_H-0.10,DRUM_H-0.002);
+      y=band[0]+Math.random()*band[1];r2=1+Math.random()*4;
+      x.fillStyle="rgba(150,158,168,"+(0.25+Math.random()*0.5)+")";
+      x.beginPath();x.ellipse(Math.random()*W,y,r2*1.7,r2,0,0,6.283);x.fill();
+    }
+    for(i=0;i<7;i++){                                        // a few drips below the band
+      var dx2=Math.random()*W;
+      x.fillStyle="rgba(0,0,0,"+(0.12+Math.random()*0.18)+")";
+      x.fillRect(dx2,lb[0]+lb[1],1.5+Math.random()*3,30+Math.random()*90);
+    }
+
+    /* ---- height: fine grain, shallow dents, crevice lines ---- */
+    hx.fillStyle="#808080";hx.fillRect(0,0,512,256);
+    for(i=0;i<9000;i++){                                     // rolled-steel tooth
+      hx.fillStyle="rgba("+(Math.random()<0.5?"255,255,255,":"0,0,0,")+(0.05+Math.random()*0.09)+")";
+      hx.fillRect(Math.random()*512,Math.random()*256,1,1+Math.random()*2);
+    }
+    for(i=0;i<10;i++){                                       // knocks picked up in transit
+      var dcx=Math.random()*512,dcy=Math.random()*256,dr=6+Math.random()*9;
+      var dg=hx.createRadialGradient(dcx,dcy,0,dcx,dcy,dr);
+      dg.addColorStop(0,"rgba(0,0,0,.28)");dg.addColorStop(1,"rgba(0,0,0,0)");
+      hx.fillStyle=dg;hx.beginPath();hx.arc(dcx,dcy,dr,0,6.283);hx.fill();
+    }
+    [[0.048,0.046],[DRUM_H*0.35,0.040],[DRUM_H*0.65,0.040],[DRUM_H-0.048,0.046]].forEach(function(f){
+      var b=bandY(f[0]-f[1],f[0]+f[1],256);
+      hx.fillStyle="rgba(0,0,0,.5)";hx.fillRect(0,b[0],512,1.5);hx.fillRect(0,b[0]+b[1]-1.5,512,1.5);
+    });
+
+    /* ---- roughness: enamel mid, hoops rubbed smooth, foot grimy ---- */
+    rx.fillStyle="#737373";rx.fillRect(0,0,512,256);                    // ~0.45
+    [[DRUM_H*0.35,0.040],[DRUM_H*0.65,0.040],[0.048,0.046],[DRUM_H-0.048,0.046]].forEach(function(f){
+      var b=bandY(f[0]-f[1],f[0]+f[1],256);
+      rx.fillStyle="rgba(60,60,60,.85)";rx.fillRect(0,b[0],512,b[1]);   // handled = shinier
+    });
+    var rg=rx.createLinearGradient(0,256,0,196);
+    rg.addColorStop(0,"rgba(215,215,215,.9)");rg.addColorStop(1,"rgba(215,215,215,0)");
+    rx.fillStyle=rg;rx.fillRect(0,196,512,60);                          // dust at the foot
+    for(i=0;i<45;i++){                        // scuffs: barely there, or they read as mud
+      rx.fillStyle="rgba(190,190,190,"+(0.05+Math.random()*0.07)+")";
+      rx.beginPath();rx.ellipse(Math.random()*512,Math.random()*256,4+Math.random()*9,2+Math.random()*4,Math.random()*3,0,6.283);rx.fill();
+    }
+
+    /* ---- metalness: paint is dielectric, chips are bare steel ---- */
+    mx.fillStyle="#2b2b2b";mx.fillRect(0,0,512,256);                    // ~0.17
+    [[0.048,0.046],[DRUM_H-0.048,0.046]].forEach(function(f){
+      var b=bandY(f[0]-f[1],f[0]+f[1],256);
+      mx.fillStyle="rgba(190,190,190,.55)";mx.fillRect(0,b[0],512,b[1]);
+    });
+    for(i=0;i<90;i++){                        // bare steel only where paint really goes:
+      var mb=Math.random()<0.5?bandY(0.002,0.11,256):bandY(DRUM_H-0.11,DRUM_H-0.002,256);
+      mx.fillStyle="rgba(230,230,230,"+(0.3+Math.random()*0.45)+")";
+      mx.beginPath();mx.ellipse(Math.random()*512,mb[0]+Math.random()*mb[1],1+Math.random()*2.4,0.8+Math.random()*1.6,0,0,6.283);mx.fill();
+    }
+
+    function tex(c,srgb){var t=new T.CanvasTexture(c);t.anisotropy=8;if(srgb)t.encoding=T.sRGBEncoding;return t;}
+    var maps={color:tex(cc,true),rough:tex(rc,false),metal:tex(mc,false),norm:normalFromHeight(hc,2.6)};
+    drumCache[key]=maps;return maps;
+  }
+
+  function headTex(base){
+    var k="head"+base;if(drumCache[k])return drumCache[k];
+    var c=cv(512,512),x=c.getContext("2d");
+    x.fillStyle=base;x.fillRect(0,0,512,512);
+    for(var i=0;i<420;i++){                                  // brushed, but radially
+      x.strokeStyle="rgba("+(i%2?"255,255,255,":"0,0,0,")+(0.02+Math.random()*0.03)+")";
+      x.lineWidth=0.6+Math.random()*1.4;var a=Math.random()*6.283;
+      x.beginPath();x.moveTo(256,256);x.lineTo(256+Math.cos(a)*256,256+Math.sin(a)*256);x.stroke();
+    }
+    [70,110,150,190].forEach(function(r){                     // embossed concentric rings
+      x.strokeStyle="rgba(0,0,0,.30)";x.lineWidth=5;x.beginPath();x.arc(256,256,r,0,6.283);x.stroke();
+      x.strokeStyle="rgba(255,255,255,.13)";x.lineWidth=2;x.beginPath();x.arc(256,256,r+3.5,0,6.283);x.stroke();
+    });
+    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;drumCache[k]=t;return t;
+  }
+
+  var steel=new T.MeshStandardMaterial({color:0x9aa2ab,metalness:1.0,roughness:0.34});
+  var plug =new T.MeshStandardMaterial({color:0x6f7580,metalness:1.0,roughness:0.28});
+
+  function makeBarrel(base,spec){
+    var g=new T.Group(),m=drumMaps(base,spec);
+    var shellMat=new T.MeshPhysicalMaterial({
+      map:m.color,roughnessMap:m.rough,metalnessMap:m.metal,normalMap:m.norm,
+      roughness:1,metalness:1,normalScale:new T.Vector2(0.55,0.55),
+      clearcoat:0.30,clearcoatRoughness:0.45,envMapIntensity:1.0
+    });
+    var shell=new T.Mesh(SHELL.geo,shellMat);
+    shell.castShadow=true;shell.receiveShadow=true;g.add(shell);
+
+    // recessed heads, set just inside the chimes
+    var headMat=new T.MeshPhysicalMaterial({map:headTex(base),metalness:0.25,roughness:0.44,
+      clearcoat:0.28,clearcoatRoughness:0.5});
+    [[DRUM_H-0.052,-Math.PI/2],[0.052,Math.PI/2]].forEach(function(hd){
+      var h=new T.Mesh(new T.CircleGeometry(DRUM_R-0.028,56),headMat);
+      h.rotation.x=hd[1];h.position.y=hd[0];h.castShadow=true;h.receiveShadow=true;g.add(h);
+    });
+
+    // two bungs on the top head: a 2" and a 3/4", where they really sit
+    [[0.30,0.075],[-0.28,0.045]].forEach(function(b){
+      var ang=b[0]*Math.PI*2,rr=DRUM_R*0.58;
+      var boss=new T.Mesh(new T.CylinderGeometry(b[1]*1.45,b[1]*1.55,0.022,20),steel);
+      boss.position.set(Math.cos(ang)*rr,DRUM_H-0.046,Math.sin(ang)*rr);g.add(boss);
+      var cap=new T.Mesh(new T.CylinderGeometry(b[1],b[1],0.028,20),plug);
+      cap.position.set(Math.cos(ang)*rr,DRUM_H-0.031,Math.sin(ang)*rr);cap.castShadow=true;g.add(cap);
+      var slot=new T.Mesh(new T.BoxGeometry(b[1]*1.5,0.008,b[1]*0.3),L.M.dark);
+      slot.position.set(Math.cos(ang)*rr,DRUM_H-0.018,Math.sin(ang)*rr);slot.rotation.y=ang;g.add(slot);
+    });
     return g;
   }
-  var act0=new T.Group();scene.add(act0);
-  var barrels=[];
-  var bcols=[["#c9962a",{big:"EN590",small:"ULSD 10 PPM",color:"#f0a000"}],
-             ["#1f6f4a",{big:"JET A-1",small:"AVIATION",color:"#2fd08a"}],
-             ["#2a2e35",{big:"D6",small:"VIRGIN FUEL OIL",color:"#ff5a1f"}],
-             ["#7a2f1c",{big:"CRUDE",small:"REBCO",color:"#ffb26b"}]];
-  // a neat pyramid of barrels + a hero one
-  var layout=[[-1.3,0,0],[0,0,0],[1.3,0,0],[-0.65,0,1.2],[0.65,0,1.2],[0,1.02,0.6]];
+
+  // offset to the right: the hero copy sits at full opacity from the first frame, so
+  // the barrels need to clear the left column instead of sitting under it
+  var act0=new T.Group();act0.position.x=1.35;scene.add(act0);
+  var bcols=[["#b8892a",{big:"EN590",small:"ULSD 10 PPM · ISO 8217",un:"UN 1202",color:"#f0a000"}],
+             ["#1b6444",{big:"JET A-1",small:"AVIATION TURBINE FUEL",un:"UN 1863",color:"#2fd08a"}],
+             ["#262a31",{big:"D6",small:"VIRGIN FUEL OIL",un:"UN 3082",color:"#ff5a1f"}],
+             ["#71301c",{big:"CRUDE",small:"REBCO · EXPORT BLEND",un:"UN 1267",color:"#ffb26b"}]];
+  // three across the front, two behind, one squarely stacked — how drums actually sit.
+  // z is centred on the pile so the slow turntable spins it in place.
+  var layout=[[-1.19,0,-0.6],[0,0,-0.6],[1.19,0,-0.6],[-0.6,0,0.61],[0.6,0,0.61],[0.6,DRUM_H,0.61]];
   for(var i=0;i<layout.length;i++){
     var bc=bcols[i%bcols.length];
     var br=makeBarrel(bc[0],bc[1]);
-    br.position.set(layout[i][0],0.77+layout[i][1],layout[i][2]);
-    br.userData.baseY=br.position.y;br.userData.ph=i*1.1;
-    act0.add(br);barrels.push(br);
+    br.position.set(layout[i][0],layout[i][1],layout[i][2]);
+    br.rotation.y=i*1.27;                       // each drum turned differently on its pallet
+    act0.add(br);
   }
 
   /* ================= ACT 1 · TANK FARM ================= */
@@ -583,50 +841,75 @@ window.IONA3D = (function(){
 
   /* ================= ACT CONTROL ================= */
   var acts=[
-    {group:act0, ground:"land", cam:{az:0.7,el:0.16,dist:6.4,ty:0.9}},
+    {group:act0, ground:"land", cam:{az:0.7,el:0.16,dist:7.7,ty:1.45}},
     {group:act1, ground:"land", cam:{az:0.5,el:0.12,dist:34,ty:5.5}},
     {group:act2, ground:"water",cam:{az:0.85,el:0.14,dist:44,ty:3.5}}
   ];
   var caps=[document.getElementById("cap0"),document.getElementById("cap1"),document.getElementById("cap2")];
-  var pbar=document.getElementById("pbar"),fade=document.getElementById("fade"),
-      stage=document.getElementById("stage");
-  var camS={az:0.7,el:0.16,dist:6.4,ty:0.9};
+  var pbar=document.getElementById("pbar");
+  var zones=[].map.call(document.querySelectorAll(".zone"),function(el){
+    return {el:el,act:parseInt(el.getAttribute("data-act"),10)};
+  });
+
+  /* The camera starts pulled back and higher, then glides to the act-0 pose on its
+     own: the barrels are framed and moving at load, without touching the scroll. */
+  var camS=reduce?{az:0.7,el:0.16,dist:7.7,ty:1.45}:{az:0.34,el:0.30,dist:12.0,ty:1.75};
+  var camPull=1,camLift=0;            // narrow-frame framing, both set in resize()
 
   function pageP(){var h=document.documentElement;return L.clamp(h.scrollTop/(h.scrollHeight-h.clientHeight),0,1);}
-  var curP=0,tgtP=0,rafOn=false;
-  function computeT(){var r=stage.getBoundingClientRect();var tot=r.height-innerHeight;tgtP=L.clamp(-r.top/tot,0,1);}
+  var actIdx=0,lastIdx=0,local=0,onCanvas=true;
+  /* Active act = the zone covering most of the viewport; local = progress inside it.
+     Between two zones an opaque text panel covers the canvas, so the act swap is
+     never on screen when it happens. */
+  function computeT(){
+    var vh=stageH(),bestI=-1,bestOv=0,seen=false,i,r,ov;
+    for(i=0;i<zones.length;i++){
+      r=zones[i].el.getBoundingClientRect();
+      ov=Math.min(r.bottom,vh)-Math.max(r.top,0);
+      if(ov>0)seen=true;
+      if(ov>bestOv){bestOv=ov;bestI=i;}
+    }
+    onCanvas=seen;
+    if(bestI<0)return;                       // no zone on screen: hold the last act
+    r=zones[bestI].el.getBoundingClientRect();
+    var tot=r.height-vh;
+    actIdx=zones[bestI].act;
+    local=tot>0?L.clamp(-r.top/tot,0,1):0;
+  }
 
   function render(t){
     pbar.style.width=(pageP()*100).toFixed(2)+"%";
-    var N=acts.length, f=curP*N, idx=Math.min(N-1,Math.floor(f)), local=f-idx;
+    var idx=actIdx;
     // visibility
     for(var i=0;i<acts.length;i++)acts[i].group.visible=(i===idx);
     var g=acts[idx].ground;
     land.visible=(g==="land");grid.visible=(g==="land");water.visible=(g==="water");
-    // boundary fade (hide the swap)
-    var edge=Math.min(f-Math.floor(f),Math.ceil(f)-f); // 0 at boundary,.5 mid
-    fade.style.opacity=(idx!==(curP*N|0))?0:L.clamp(1-edge/0.06,0,1).toFixed(3);
-    fade.style.opacity=L.clamp(1-edge/0.06,0,1).toFixed(3);
-    // captions
+    // captions: readable the moment their zone arrives, gone as it leaves. the head
+    // start on `local` is what makes the hero text legible at scroll 0.
     for(var c=0;c<caps.length;c++){
-      var vis=(c===idx)?L.clamp(Math.min(local/0.14,(1-local)/0.18),0,1):0;
+      var vis=(c===idx)?L.clamp(Math.min((local+0.22)/0.16,(1-local)/0.20),0,1):0;
       caps[c].style.opacity=vis.toFixed(3);
-      caps[c].style.transform="translateY("+(-8+ (1-vis)*22).toFixed(1)+"px)";
+      caps[c].style.transform="translateY(-50%) translateY("+((1-vis)*20).toFixed(1)+"px)";
     }
     // camera target for this act + subtle orbit via local
     var cam=acts[idx].cam;
     var taz=cam.az + (local-0.5)*0.5;
-    camS.az=L.lerp(camS.az,taz,0.08);
-    camS.el=L.lerp(camS.el,cam.el,0.08);
-    camS.dist=L.lerp(camS.dist,cam.dist,0.08);
-    camS.ty=L.lerp(camS.ty,cam.ty,0.08);
+    if(idx!==lastIdx){          // act swapped behind a text panel: cut, don't swing
+      camS.az=taz;camS.el=cam.el;camS.dist=cam.dist;camS.ty=cam.ty;lastIdx=idx;
+    }
+    var k=reduce?1:0.08;
+    camS.az=L.lerp(camS.az,taz,k);
+    camS.el=L.lerp(camS.el,cam.el,k);
+    camS.dist=L.lerp(camS.dist,cam.dist*camPull,k);
+    camS.ty=L.lerp(camS.ty,cam.ty+camLift,k);
     var cy=Math.sin(camS.el)*camS.dist+camS.ty, rr=Math.cos(camS.el)*camS.dist;
     camera.position.set(Math.sin(camS.az)*rr,cy,Math.cos(camS.az)*rr);
     camera.lookAt(0,camS.ty,0);
 
     // per-act internal animation
     if(!reduce){
-      if(idx===0){var i2=0;barrels.forEach(function(b){b.rotation.y=t*0.0002+b.userData.ph;b.position.y=b.userData.baseY+Math.sin(t*0.0015+b.userData.ph)*0.03;});}
+      // slow turntable. drums standing on the ground shouldn't bob or spin individually
+      if(idx===0){act0.rotation.y=t*0.00005;}
       if(idx===1){flowMats.forEach(function(fo){fo.mesh.position.x=((t*0.004+fo.off)%22)-13; });}
       if(idx===2){if(water.userData.tick)water.userData.tick(t);
         act2.position.y=Math.sin(t*0.0016)*0.25; act2.rotation.z=Math.sin(t*0.0013)*0.012;
@@ -635,7 +918,24 @@ window.IONA3D = (function(){
     renderer.render(scene,camera);
   }
 
-  function resize(){var w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  /* One screen's worth of height. Inside a frame that the host grew to the content
+     height, innerHeight reports the whole document — many screens — which would scale
+     every scene up and push the hero off the top. Fall back to the display height. */
+  function stageH(){
+    var s=(window.screen&&screen.height)?screen.height:0;
+    return (s&&innerHeight>s*1.4)?s:innerHeight;
+  }
+  function setVH(){document.documentElement.style.setProperty("--vh",stageH()+"px");}
+
+  function resize(){setVH();var w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+    // wide: the copy is a left column, so the barrels clear it. portrait: the copy is
+    // full-width at the top, so keep the stack centred instead of pushing it off-frame
+    act0.position.x=(w/h<0.95)?0.15:1.35;
+    // a narrow frame crops the subject, so step back in proportion to how narrow it is
+    camPull=Math.min(1.35,Math.max(1,Math.sqrt(0.95/(w/h))));
+    // and raise the look-at point, which drops the subject into the lower half of the
+    // frame — in portrait the copy spans the full width and would otherwise sit on it
+    camLift=(w/h<0.95)?0.95:0;}
   addEventListener("resize",function(){resize();computeT();});
 
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});},{threshold:.16});
@@ -649,17 +949,114 @@ window.IONA3D = (function(){
 
   function loop(t){
     computeT();                    // read scroll every frame (robust)
-    curP=L.lerp(curP,tgtP,0.1);if(Math.abs(curP-tgtP)<0.0003)curP=tgtP;
-    render(t);
+    // draw only while a zone is on screen — a full-height text panel hides the canvas
+    if(onCanvas)render(t);else pbar.style.width=(pageP()*100).toFixed(2)+"%";
     requestAnimationFrame(loop);   // continuous (barrels/water animate)
   }
-  addEventListener("scroll",function(){computeT(); if(reduce){curP=tgtP;render(performance.now());}},{passive:true});
+  addEventListener("scroll",function(){computeT(); if(reduce)render(performance.now());},{passive:true});
 
   requestAnimationFrame(function(t){
-    resize();computeT();curP=tgtP;render(t||0);
+    resize();computeT();render(t||0);
     document.getElementById("loading").classList.add("hide");
     if(!reduce)requestAnimationFrame(loop);
   });
+})();
+</script>
+
+<script>
+/* ================= LANGUAGE · EN default, FR on demand =================
+   English is the shipped language: it lives in the HTML, so the page reads correctly
+   with no JS and for crawlers. Only the French strings are carried here, and the
+   English ones are harvested from the DOM at boot — one source of truth per language,
+   so the two can never drift apart. Keys are the data-i18n attributes. */
+(function(){
+  "use strict";
+  var FR={
+    "hero.eyebrow":"Oil trading · Intermédiaire",
+    "hero.h1":"On déplace le pétrole, proprement.",
+    "hero.sub":"Nous relions acheteurs et vendeurs vérifiés sur les produits raffinés — EN590 en tête — avec une procédure carrée : KYC, POP, SGS. Rien de flou.",
+    "cue":"Défiler<span></span>",
+
+    "a1.eyebrow":"Parc de cuves",
+    "a1.h2":"Vopak à Vopak.<br>Cuve à cuve.",
+    "a1.sub":"Transfert de titre en cuve, sans mouvement physique inutile. TTT / TTV sur les tank farms de Rotterdam et Fujairah — Dip Test et Dip&nbsp;and&nbsp;Pay à l'appui.",
+
+    "a2.eyebrow":"Livraison",
+    "a2.h2":"FOB, le monde<br>en manifold.",
+    "a2.sub":"Quand il faut bouger le produit, on l'embarque. FOB Rotterdam ou Fujairah, jusqu'à 100&nbsp;000&nbsp;MT en spot, inspection SGS à l'enlèvement.",
+
+    "pr.eyebrow":"Produits",
+    "pr.h2":"Ce qu'on<br>fait circuler",
+    "pr.lead":"Produits raffinés et bruts, origines documentées, hors sanctions. On ne travaille qu'avec des tickets propres.",
+    "pr.c1":"Le plus demandé. Ultra-low sulphur, spec ISO. Spot ou contrat.",
+    "pr.c2":"Kérosène aviation, certificats de qualité et batch récents.",
+    "pr.c3":"Gasoil et virgin fuel oil D6 pour utilities et bunkering.",
+    "pr.k4":"BRUT",
+    "pr.c4":"Bruts sur origines vérifiées, papiers complets, chaîne de titre claire.",
+    "pr.k5":"GAZ",
+    "pr.c5":"Cargaisons gaz, allocation portuaire confirmée avant offre.",
+    "pr.k6":"BITUME",
+    "pr.c6":"Pour infrastructure, conditionné ou en vrac chauffé.",
+
+    "pc.eyebrow":"Procédure",
+    "pc.h2":"Une transaction<br>sans surprise",
+    "pc.lead":"La séquence que nous suivons — celle qui protège les deux parties avant qu'un euro ne bouge.",
+    "pc.t1":"Engagement &amp; KYC",
+    "pc.p1":"L'acheteur émet son ICPO. On échange CIS, POF et due diligence des deux côtés — on sait à qui on parle.",
+    "pc.t2":"Offre &amp; contrat",
+    "pc.p2":"Soft Corporate Offer, puis contrat SPA. Produit, quantité (MT), incoterm et tank farm actés.",
+    "pc.t3":"Preuve produit",
+    "pc.p3":"Proof of Product et reçu de cuve Vopak. Origine documentée, conforme sanctions.",
+    "pc.t4":"Inspection",
+    "pc.p4":"L'acheteur mène son SGS / Dip Test à la cuve avant tout paiement. Résultat = vérité.",
+    "pc.t5":"Transfert &amp; paiement",
+    "pc.p5":"Dip and Pay : tank-to-tank (TTT) sur confirmation. Paiement contre transfert de titre.",
+    "pc.t6":"Titre &amp; suite",
+    "pc.p6":"Titre transféré, cargaison à l'acheteur. On garde la ligne ouverte pour le prochain lot.",
+    "pc.note":"Conformité d'abord : origines documentées, aucune cargaison sous sanctions, KYC complet des deux côtés. Un ticket propre vaut mieux qu'un deal rapide.",
+
+    "hb.eyebrow":"Chiffres",
+    "hb.h2":"Deux hubs,<br>un réseau",
+    "hb.lead":"Nous opérons là où le produit est : les grands tank farms européens et du Golfe.",
+    "hb.s4":"KYC / conforme",
+
+    "ft.eyebrow":"Un ticket propre ?",
+    "ft.cta":'Demander la procédure <span class="arrow">→</span>',
+    "ft.meta":"IONA ENERGY<br>Intermédiaire produits pétroliers<br>Rotterdam · Fujairah<br>desk@iona.energy<br><br>© MMXXVI · Démo · Vraie 3D WebGL",
+
+    "loading":"CHARGEMENT DE LA SCÈNE 3D…"
+  };
+  var META={
+    en:{title:"IONA ENERGY — Oil trading intermediary",
+        desc:"Oil products intermediary: EN590, JET A-1, D6, crude. Rotterdam · Fujairah. Vetted counterparties, ICPO to TTT."},
+    fr:{title:"IONA ENERGY — Intermédiaire en produits pétroliers",
+        desc:"Intermédiaire en produits pétroliers : EN590, JET A-1, D6, brut. Rotterdam · Fujairah. Contreparties vérifiées, de l'ICPO au TTT."}
+  };
+
+  var nodes=[].slice.call(document.querySelectorAll("[data-i18n]"));
+  var EN={};nodes.forEach(function(n){EN[n.getAttribute("data-i18n")]=n.innerHTML;});
+  var btn=document.getElementById("lang"),segs=btn.querySelectorAll("[data-l]");
+  var desc=document.querySelector('meta[name="description"]');
+  var cur="en";
+
+  function apply(lang){
+    var dict=(lang==="fr")?FR:EN,i;
+    nodes.forEach(function(n){
+      var v=dict[n.getAttribute("data-i18n")];
+      if(v!=null)n.innerHTML=v;
+    });
+    document.documentElement.lang=lang;
+    document.title=META[lang].title;
+    if(desc)desc.setAttribute("content",META[lang].desc);
+    for(i=0;i<segs.length;i++)segs[i].classList.toggle("on",segs[i].getAttribute("data-l")===lang);
+    btn.setAttribute("aria-label",lang==="fr"?"Switch to English":"Passer en français");
+    try{localStorage.setItem("iona.lang",lang);}catch(e){}
+    cur=lang;
+  }
+
+  try{var saved=localStorage.getItem("iona.lang");if(saved==="fr"||saved==="en")cur=saved;}catch(e){}
+  apply(cur);
+  btn.addEventListener("click",function(){apply(cur==="fr"?"en":"fr");});
 })();
 </script>
 
