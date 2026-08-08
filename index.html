@@ -969,7 +969,8 @@ window.IONA3D = (function(){
   (function(){
     // placed on a sight line that clears every tank between here and the act-1 camera
     // turned broadside to the act-1 camera, or the cab hides its own barrel
-    var bay=new T.Group();bay.position.set(-7,0,13.5);bay.rotation.y=-2.59;act1.add(bay);
+    var bay=new T.Group();bay.position.set(-2.6,0,11.5);bay.rotation.y=-2.59;
+    bay.scale.setScalar(0.86);act1.add(bay);
     bay.add(makeRoadTanker());
     [1.9,-1.9].forEach(function(z){
       var col=new T.Mesh(new T.CylinderGeometry(0.14,0.14,6.4,12),pipeMat);
@@ -1195,7 +1196,9 @@ window.IONA3D = (function(){
   /* ================= ACT CONTROL ================= */
   var acts=[
     {group:act0, ground:"land", cam:{az:0.7,el:0.16,dist:7.7,ty:1.45}},
-    {group:act1, ground:"land", cam:{az:0.5,el:0.15,dist:46,ty:6.2}},
+    // the original tank-farm framing, restored: tight on the tanks. The loading bay is
+    // placed to fit inside it rather than the camera pulling back to accommodate it.
+    {group:act1, ground:"land", cam:{az:0.5,el:0.12,dist:34,ty:5.5}},
     {group:act2, ground:"water",cam:{az:0.95,el:0.13,dist:29,ty:2.1}}
   ];
   var caps=[document.getElementById("cap0"),document.getElementById("cap1"),document.getElementById("cap2")];
