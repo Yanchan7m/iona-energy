@@ -142,22 +142,16 @@
   .lang:hover span:not(.on){color:var(--ink)}
   .lang:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
-  /* WhatsApp in the bar: the one entry point that survives every context, since a
-     viewport-anchored element cannot follow the screen inside a stretched frame */
-  .wa-top{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
-    background:#25d366;flex:0 0 auto;transition:transform .2s,box-shadow .2s;
-    box-shadow:0 2px 10px rgba(0,0,0,.4)}
-  .wa-top svg{width:19px;height:19px;fill:#fff}
-  .wa-top:hover{transform:scale(1.08);box-shadow:0 4px 14px rgba(37,211,102,.45)}
-  .wa-top:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-
-  /* floating WhatsApp, bottom right, sized and inset responsively. Hidden when the page
-     is embedded in a frame stretched to the content height — there it would sit nine
-     screens down at the very bottom of the document instead of floating. */
-  html.embedded .wa{display:none}
-  .wa{position:fixed;z-index:72;right:clamp(14px,3vw,28px);
+  /* Both controls float together, bottom right. A fixed element anchors to the bottom of
+     the document — not the screen — when the page is embedded in a frame stretched to
+     the content height; there the dock is switched to absolute at the foot of the first
+     screen, so it still shows in the requested corner instead of nine screens down. */
+  .dock{position:fixed;z-index:72;right:clamp(14px,3vw,28px);
     bottom:calc(clamp(14px,3vw,26px) + env(safe-area-inset-bottom,0px));
-    width:clamp(48px,4.6vw,58px);height:clamp(48px,4.6vw,58px);border-radius:50%;
+    display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+  html.embedded .dock{position:absolute;bottom:auto;top:calc(var(--vh) - 116px)}
+
+  .wa{width:clamp(48px,4.6vw,58px);height:clamp(48px,4.6vw,58px);border-radius:50%;position:relative;
     display:grid;place-items:center;background:#25d366;text-decoration:none;
     box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .2s;animation:waPulse 3s ease-out infinite}
   .wa>svg{width:56%;height:56%;fill:#fff}
@@ -189,12 +183,6 @@
   <div class="brand">IONA·ENERGY</div>
   <div class="topright">
     <nav class="nav"><a href="#products">Products</a><a href="#procedure">Procedure</a><a href="#hubs">Hubs</a><a href="#contact">Contact</a></nav>
-    <a class="wa-top" data-wa href="https://wa.me/33660687771" target="_blank" rel="noopener" aria-label="WhatsApp">
-      <svg aria-hidden="true" focusable="false"><use href="#wa-glyph"/></svg>
-    </a>
-    <button class="lang" type="button" aria-label="Passer en français">
-      <span data-l="en">EN</span><span data-l="fr">FR</span>
-    </button>
   </div>
 </header>
 
@@ -306,10 +294,15 @@
   </div></div>
 </footer>
 
-<a class="wa" id="wa" data-wa href="https://wa.me/33660687771" target="_blank" rel="noopener" aria-label="WhatsApp">
-  <svg aria-hidden="true" focusable="false"><use href="#wa-glyph"/></svg>
-  <span class="wa-label" data-i18n="wa.label">Chat on WhatsApp</span>
-</a>
+<div class="dock">
+  <button class="lang" type="button" aria-label="Passer en français">
+    <span data-l="en">EN</span><span data-l="fr">FR</span>
+  </button>
+  <a class="wa" id="wa" data-wa href="https://wa.me/33660687771" target="_blank" rel="noopener" aria-label="WhatsApp">
+    <svg aria-hidden="true" focusable="false"><use href="#wa-glyph"/></svg>
+    <span class="wa-label" data-i18n="wa.label">Chat on WhatsApp</span>
+  </a>
+</div>
 
 <div class="loading" id="loading"><div class="mono" data-i18n="loading">LOADING 3D SCENE…</div></div>
 
@@ -967,9 +960,12 @@ window.IONA3D = (function(){
   }
   // the loading bay: truck under its gantry, parked in the open lane between tanks
   (function(){
-    // placed on a sight line that clears every tank between here and the act-1 camera
-    // turned broadside to the act-1 camera, or the cab hides its own barrel
-    var bay=new T.Group();bay.position.set(-2.6,0,11.5);bay.rotation.y=-2.59;
+    /* In the lane between the tanks, broadside to the camera. Each tank is a 4-unit
+       cylinder at (-14,-3) (-1,2) (12,-6) (-8,12) (7,10); the previous spot sat 1.8 units
+       from the centre of the one at (-8,12) — the truck was buried inside it. Here the
+       nearest tank centre is 5.66 units from any point along the truck's axis, and no
+       tank stands between it and the act-1 camera. */
+    var bay=new T.Group();bay.position.set(3,0,14);bay.rotation.y=-0.785;
     bay.scale.setScalar(0.86);act1.add(bay);
     bay.add(makeRoadTanker());
     [1.9,-1.9].forEach(function(z){
