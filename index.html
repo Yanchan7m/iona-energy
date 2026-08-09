@@ -14,13 +14,14 @@
 <meta name="twitter:card" content="summary_large_image">
 <style>
   :root{--bg:#07090c;--bg2:#0b0f14;--panel:#10151c;--ink:#eef1f4;--muted:#8b97a3;--line:#1e2732;
-        --accent:#f0a000;--accent2:#12b886;--hot:#ff5a1f}
+        --accent:#1a29ff;--accent-light:#4d58ff;--accent-dark:#141fb8;--accent-ink:#7c86ff;
+        --accent2:#12b886;--hot:#ff5a1f}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);overflow-x:hidden;
     font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
   .progress{position:fixed;top:0;left:0;height:2px;width:100%;z-index:60}
-  .progress>i{display:block;height:100%;width:0;background:var(--accent)}
+  .progress>i{display:block;height:100%;width:0;background:var(--accent-light)}
   /* the blend runs on the brand and nav, not the whole bar — it would invert the
      language pill's colours too */
   .topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;
@@ -61,9 +62,9 @@
     .cap::before{inset:-96px -40px;
       background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.93),rgba(7,9,12,.74) 44%,rgba(7,9,12,.28) 74%,rgba(7,9,12,0) 100%)}
   }
-  .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);
+  .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent-ink);
     display:inline-flex;align-items:center;gap:10px;margin:0 0 18px}
-  .eyebrow::before{content:"";width:26px;height:1px;background:var(--accent)}
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--accent-ink)}
   .cap.right .eyebrow{flex-direction:row-reverse}
   h1,h2{margin:0;font-weight:800;line-height:.94;letter-spacing:-.02em;text-transform:uppercase;text-wrap:balance}
   h1{font-size:clamp(42px,8vw,104px)} h2{font-size:clamp(28px,5vw,68px)}
@@ -77,7 +78,7 @@
     border-radius:999px;padding:6px 12px;color:var(--muted)}
   .scroll-cue{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:7;color:var(--muted);
     font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:8px}
-  .scroll-cue span{width:1px;height:32px;background:linear-gradient(var(--accent),transparent);animation:cue 1.8s ease-in-out infinite}
+  .scroll-cue span{width:1px;height:32px;background:linear-gradient(var(--accent-light),transparent);animation:cue 1.8s ease-in-out infinite}
   @keyframes cue{0%,100%{opacity:.25;transform:scaleY(.5)}50%{opacity:1;transform:scaleY(1)}}
 
   .wrap{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
@@ -92,7 +93,7 @@
   .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
   @media(max-width:820px){.cards{grid-template-columns:1fr}}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:8px}
-  .card .k{font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.14em;color:var(--accent)}
+  .card .k{font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.14em;color:var(--accent-ink)}
   .card h3{margin:2px 0 4px;font-size:22px;font-weight:800;letter-spacing:-.01em}
   .card p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
   .card .spec{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-family:ui-monospace,monospace;font-size:12px}
@@ -100,7 +101,7 @@
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
   @media(max-width:820px){.steps{grid-template-columns:1fr}}
   .step{background:var(--panel);padding:26px}
-  .step .no{font-family:ui-monospace,monospace;color:var(--accent);font-size:12px;letter-spacing:.2em}
+  .step .no{font-family:ui-monospace,monospace;color:var(--accent-ink);font-size:12px;letter-spacing:.2em}
   .step h4{margin:10px 0 6px;font-size:17px;font-weight:800;text-transform:uppercase;letter-spacing:.02em}
   .step p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
   .step .tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
@@ -111,10 +112,10 @@
   @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
   .stat{background:var(--panel);padding:clamp(22px,3vw,32px)}
   .stat .n{font-size:clamp(30px,4.4vw,52px);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-  .stat .n em{color:var(--accent);font-style:normal}
+  .stat .n em{color:var(--accent-ink);font-style:normal}
   .stat .l{margin-top:8px;color:var(--muted);font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
 
-  .cta{display:inline-flex;align-items:center;gap:12px;margin-top:30px;background:var(--accent);color:#0b0f14;
+  .cta{display:inline-flex;align-items:center;gap:12px;margin-top:30px;background:var(--accent);color:#fff;
     text-decoration:none;font-weight:800;letter-spacing:.03em;padding:16px 26px;border-radius:12px;transition:transform .2s}
   .cta:hover{transform:translateY(-2px)}.cta .arrow{transition:transform .2s}.cta:hover .arrow{transform:translateX(4px)}
   .note{margin-top:28px;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:10px;
@@ -125,12 +126,12 @@
   .foot .big{font-size:clamp(38px,8vw,104px);font-weight:800;letter-spacing:-.03em;line-height:.9}
   .foot .meta{color:var(--muted);font-family:ui-monospace,monospace;font-size:12px;line-height:1.9}
   .foot .meta a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line);transition:border-color .2s}
-  .foot .meta a:hover{border-bottom-color:var(--accent)}
+  .foot .meta a:hover{border-bottom-color:var(--accent-ink)}
   .madeby{margin-top:52px;padding-top:22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;
     gap:16px;flex-wrap:wrap;align-items:center;color:var(--muted);font-family:ui-monospace,monospace;font-size:11px;
     letter-spacing:.14em;text-transform:uppercase}
   .madeby a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
-  .madeby a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+  .madeby a:hover{color:var(--accent-ink);border-bottom-color:var(--accent-ink)}
   .madeby .by strong{color:var(--ink);font-weight:700;letter-spacing:.14em}
   /* language switch, in the top bar so it is visible from the first screen — and, unlike
      a fixed element, still visible when the page is embedded in a stretched frame */
@@ -138,7 +139,7 @@
     background:rgba(10,14,19,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
     cursor:pointer;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;letter-spacing:.14em}
   .lang span{padding:5px 10px;border-radius:999px;color:var(--muted);transition:color .2s,background-color .2s}
-  .lang span.on{background:var(--accent);color:#0b0f14;font-weight:700}
+  .lang span.on{background:var(--accent);color:#fff;font-weight:700}
   .lang:hover span:not(.on){color:var(--ink)}
   .lang:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
@@ -152,7 +153,7 @@
   html.embedded .dock{position:absolute;bottom:auto;top:calc(var(--vh) - 116px)}
 
   .wa{width:clamp(48px,4.6vw,58px);height:clamp(48px,4.6vw,58px);border-radius:50%;position:relative;
-    display:grid;place-items:center;background:#25d366;text-decoration:none;
+    display:grid;place-items:center;background:var(--accent);text-decoration:none;
     box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .2s;animation:waPulse 3s ease-out infinite}
   .wa>svg{width:56%;height:56%;fill:#fff}
   .wa:hover{transform:translateY(-2px) scale(1.04)}
@@ -811,7 +812,7 @@ window.IONA3D = (function(){
   // offset to the right: the hero copy sits at full opacity from the first frame, so
   // the barrels need to clear the left column instead of sitting under it
   var act0=new T.Group();act0.position.x=1.35;scene.add(act0);
-  var bcols=[["#b8892a",{big:"EN590",small:"ULSD 10 PPM · ISO 8217",un:"UN 1202",color:"#f0a000"}],
+  var bcols=[["#b8892a",{big:"EN590",small:"ULSD 10 PPM · ISO 8217",un:"UN 1202",color:"#6b78ff"}],
              ["#1b6444",{big:"JET A-1",small:"AVIATION TURBINE FUEL",un:"UN 1863",color:"#2fd08a"}],
              ["#262a31",{big:"D6",small:"VIRGIN FUEL OIL",un:"UN 3082",color:"#ff5a1f"}],
              ["#71301c",{big:"CRUDE",small:"REBCO · EXPORT BLEND",un:"UN 1267",color:"#ffb26b"}]];
@@ -833,7 +834,7 @@ window.IONA3D = (function(){
     x.strokeStyle="rgba(0,0,0,.18)";x.lineWidth=3;
     for(var y=30;y<256;y+=42){x.beginPath();x.moveTo(0,y);x.lineTo(1024,y);x.stroke();}
     x.fillStyle="#0e1116";x.font="bold 40px Helvetica,Arial";x.fillText("IONA ENERGY",60,150);
-    x.fillStyle="#f0a000";x.fillRect(60,170,220,10);
+    x.fillStyle="#1a29ff";x.fillRect(60,170,220,10);
     var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;t.wrapS=T.RepeatWrapping;t.repeat.x=2;return t;
   }
   function makeTank(r,h,x,z){
@@ -863,7 +864,7 @@ window.IONA3D = (function(){
     var pipe=new T.Mesh(new T.CylinderGeometry(0.22,0.22,44,16),pipeMat);
     pipe.rotation.z=Math.PI/2;pipe.position.set(-2,1.2+pz*0.7,-6);act1.add(pipe);
     // flow indicator (emissive band that slides)
-    var fm=new T.MeshStandardMaterial({color:0xf0a000,emissive:0xf0a000,emissiveIntensity:0.9,roughness:0.4});
+    var fm=new T.MeshStandardMaterial({color:0x1a29ff,emissive:0x4d58ff,emissiveIntensity:0.9,roughness:0.4});
     var fb=new T.Mesh(new T.CylinderGeometry(0.24,0.24,1.6,16),fm);
     fb.rotation.z=Math.PI/2;fb.position.set(-2,1.2+pz*0.7,-6);act1.add(fb);
     flowMats.push({mesh:fb,off:pz*7});
@@ -881,7 +882,7 @@ window.IONA3D = (function(){
     }
     x.fillStyle="#0e1116";x.fillRect(0,98,1024,60);       // brand band
     x.textBaseline="middle";
-    x.fillStyle="#f0a000";x.font="bold 44px Helvetica,Arial";x.fillText("IONA ENERGY",38,128);
+    x.fillStyle="#1a29ff";x.font="bold 44px Helvetica,Arial";x.fillText("IONA ENERGY",38,128);
     x.fillStyle="#c3ccd6";x.font="19px ui-monospace,monospace";x.fillText("EN590 · ULSD 10 PPM",356,131);
     x.fillStyle="#e8730f";x.fillRect(700,101,146,54);     // orange ADR panel
     x.strokeStyle="#0e1116";x.lineWidth=3;x.strokeRect(700,101,146,54);
@@ -1119,7 +1120,7 @@ window.IONA3D = (function(){
 
     var funnel=new T.Mesh(new T.CylinderGeometry(0.62,0.72,2.5,20),grey);
     funnel.position.set(-13.3,9.4,0);funnel.castShadow=true;ship.add(funnel);
-    var fband=new T.Mesh(new T.CylinderGeometry(0.66,0.70,0.85,20),paint(0xf0a000,0.4,0.5));
+    var fband=new T.Mesh(new T.CylinderGeometry(0.66,0.70,0.85,20),paint(0x1a29ff,0.4,0.5));
     fband.position.set(-13.3,9.75,0);ship.add(fband);
     var mast=new T.Mesh(new T.CylinderGeometry(0.05,0.05,2.6,10),steel);
     mast.position.set(-11.9,10.5,0);ship.add(mast);
@@ -1142,7 +1143,7 @@ window.IONA3D = (function(){
       vw.position.set(0.6,4.72,zz);vw.rotation.y=Math.PI/2;ship.add(vw);
     }
     var tray=new T.Mesh(new T.BoxGeometry(2.6,0.1,4.4),grey);tray.position.set(0.6,3.6,0);ship.add(tray);
-    var hcrane=new T.Mesh(new T.CylinderGeometry(0.12,0.14,3.4,12),paint(0xf0a000,0.5,0.5));
+    var hcrane=new T.Mesh(new T.CylinderGeometry(0.12,0.14,3.4,12),paint(0x1a29ff,0.5,0.5));
     hcrane.position.set(0.6,5.4,2.0);hcrane.rotation.x=0.45;ship.add(hcrane);
 
     for(var h2=0;h2<5;h2++){                                       // tank hatches + P/V valves
