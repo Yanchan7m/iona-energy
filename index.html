@@ -62,6 +62,13 @@
     .cap::before{inset:-96px -40px;
       background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.93),rgba(7,9,12,.74) 44%,rgba(7,9,12,.28) 74%,rgba(7,9,12,0) 100%)}
   }
+  /* the tank farm is the one scene bright enough to swallow white type: the tanks are
+     near-white and fill the frame behind the copy, where the sea and the drums are both
+     dark. This caption alone gets a denser scrim, and the sub-copy stays near full ink
+     instead of dropping to --muted, which was disappearing into the plating. */
+  #cap1::before{
+    background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.97),rgba(7,9,12,.9) 46%,rgba(7,9,12,.6) 74%,rgba(7,9,12,0) 100%)}
+  #cap1 .sub{color:#d3dae1}
   .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent-ink);
     display:inline-flex;align-items:center;gap:10px;margin:0 0 18px}
   .eyebrow::before{content:"";width:26px;height:1px;background:var(--accent-ink)}
@@ -337,7 +344,10 @@ window.IONA3D = (function(){
   /* ---------- Renderer ---------- */
   function makeRenderer(canvas){
     var r = new T.WebGLRenderer({canvas:canvas, antialias:true});
-    r.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+    /* 1.5 rather than 2: with MSAA on and a full shadow pass, a DPR-3 phone was
+       rendering four times the pixels of 1x, twice per frame. Above 1.5 the gain is
+       invisible on a scene this dark and the cost is the whole mobile frame budget. */
+    r.setPixelRatio(Math.min(1.5, window.devicePixelRatio||1));
     r.shadowMap.enabled = true;
     r.shadowMap.type = T.PCFSoftShadowMap;
     r.outputEncoding = T.sRGBEncoding;
@@ -580,6 +590,74 @@ window.IONA3D = (function(){
   function box(w,h,d,mat){var m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);return m;}
   function cv(w,h){var c=document.createElement("canvas");c.width=w;c.height=h;return c;}
 
+  /* A mesh only earns a place in the shadow pass if it is big enough to leave a mark.
+     The key light's shadow camera spans 52 units onto a 2048px map — roughly 39 texels
+     per unit — so a 0.05-unit railing stanchion covers two texels. It used to cost a
+     full draw call and return nothing visible. Bounding-box volume is the cheapest
+     honest proxy for "would this read as a shadow at all". Measured in geometry space,
+     which is close enough here: nothing in these scenes is scaled far from 1. */
+  /* Three's core build ships without BufferGeometryUtils, so here is the minimum that
+     does the job: concatenate already-positioned geometries into one buffer. Only
+     position, normal and uv are carried — enough for every part welded below. */
+  function mergeGeos(list){
+    var pos=[],nor=[],uv=[],idx=[],off=0;
+    list.forEach(function(g){
+      var p=g.attributes.position,n=g.attributes.normal,u=g.attributes.uv,i,ix;
+      for(i=0;i<p.count;i++){
+        pos.push(p.getX(i),p.getY(i),p.getZ(i));
+        if(n)nor.push(n.getX(i),n.getY(i),n.getZ(i));else nor.push(0,1,0);
+        if(u)uv.push(u.getX(i),u.getY(i));else uv.push(0,0);
+      }
+      ix=g.index;
+      if(ix)for(i=0;i<ix.count;i++)idx.push(ix.getX(i)+off);
+      else for(i=0;i<p.count;i++)idx.push(i+off);
+      off+=p.count;
+    });
+    var out=new T.BufferGeometry();
+    out.setAttribute("position",new T.Float32BufferAttribute(pos,3));
+    out.setAttribute("normal",new T.Float32BufferAttribute(nor,3));
+    out.setAttribute("uv",new T.Float32BufferAttribute(uv,2));
+    out.setIndex(idx);                       // Three picks 16- or 32-bit on its own
+    return out;
+  }
+  /* Bake each mesh's own transform into its vertices, then fuse the lot into one. */
+  function weld(meshes,material){
+    var geos=meshes.map(function(m){m.updateMatrix();return m.geometry.clone().applyMatrix4(m.matrix);});
+    var fused=new T.Mesh(mergeGeos(geos),material);
+    geos.forEach(function(g){g.dispose();});
+    return fused;
+  }
+  /* Fuse a group's direct mesh children, one merged mesh per material. Anything alone
+     with its material is left untouched — that costs nothing to skip and it keeps
+     meshes carrying extra attributes (the hull's vertex colours) intact. Child groups
+     are never touched, which is what keeps the truck's wheels free to turn. */
+  function fuseByMaterial(root){
+    var byMat=new Map();
+    root.children.forEach(function(m){
+      if(!m.isMesh||m.geometry.attributes.color)return;
+      var b=byMat.get(m.material);
+      if(!b){b=[];byMat.set(m.material,b);}
+      b.push(m);
+    });
+    byMat.forEach(function(list,mat){
+      if(list.length<2)return;
+      list.forEach(function(m){root.remove(m);});
+      root.add(weld(list,mat));
+    });
+  }
+
+  var SHADOW_MIN_VOL=0.05;
+  var _sz=new T.Vector3();
+  function shadowBySize(root,skip){
+    root.traverse(function(m){
+      if(!m.isMesh||m===skip)return;
+      if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();
+      m.geometry.boundingBox.getSize(_sz);
+      var big=(_sz.x*_sz.y*_sz.z)>=SHADOW_MIN_VOL;
+      m.castShadow=big;m.receiveShadow=big;
+    });
+  }
+
   /* ---------- Land ground (acts 0,1) ---------- */
   var land=new T.Mesh(new T.PlaneGeometry(600,600),paint(0x0a0e13,0,0.95));
   land.rotation.x=-Math.PI/2;land.receiveShadow=true;scene.add(land);
@@ -648,10 +726,16 @@ window.IONA3D = (function(){
   function drumMaps(base,spec){
     var key=base+"|"+spec.big;if(drumCache[key])return drumCache[key];
     var W=1024,H=512,i,y,r2;
+    /* Only the colour map carries detail the eye resolves — the printed band, the UN
+       number, the chipped paint. The height field feeds a normal map at scale 0.55, and
+       roughness and metalness are broad bands with a few scuffs: quarter-size canvases
+       hold all of that and cost a quarter of the memory. */
+    var HW=512,HH=256;                                       // height field → normal map
+    var SW=256,SH=128;                                       // roughness + metalness
     var cc=cv(W,H),x=cc.getContext("2d");                    // colour
-    var hc=cv(512,256),hx=hc.getContext("2d");               // height → normal
-    var rc=cv(512,256),rx=rc.getContext("2d");               // roughness
-    var mc=cv(512,256),mx=mc.getContext("2d");               // metalness
+    var hc=cv(HW,HH),hx=hc.getContext("2d");                 // height → normal
+    var rc=cv(SW,SH),rx=rc.getContext("2d");                 // roughness
+    var mc=cv(SW,SH),mx=mc.getContext("2d");                 // metalness
     function cy(v,hh){return (1-v)*(hh||H);}                 // v=0 is the drum's base
     function bandY(y0,y1,hh){var a=cy(SHELL.vAt(y1),hh),b=cy(SHELL.vAt(y0),hh);return [a,b-a];}
 
@@ -712,46 +796,51 @@ window.IONA3D = (function(){
     }
 
     /* ---- height: fine grain, shallow dents, crevice lines ---- */
-    hx.fillStyle="#808080";hx.fillRect(0,0,512,256);
-    for(i=0;i<9000;i++){                                     // rolled-steel tooth
-      hx.fillStyle="rgba("+(Math.random()<0.5?"255,255,255,":"0,0,0,")+(0.05+Math.random()*0.09)+")";
-      hx.fillRect(Math.random()*512,Math.random()*256,1,1+Math.random()*2);
+    hx.fillStyle="#808080";hx.fillRect(0,0,HW,HH);
+    /* 1 500 marks rather than 9 000. This field is only ever read as a normal map at
+       normalScale 0.55, where the eye takes in the overall tooth of the steel and not
+       the individual specks; each mark carries a little more contrast and a little more
+       size to hold the same impression. This one loop was three quarters of every
+       canvas operation the page performed at load. */
+    for(i=0;i<1500;i++){                                     // rolled-steel tooth
+      hx.fillStyle="rgba("+(Math.random()<0.5?"255,255,255,":"0,0,0,")+(0.06+Math.random()*0.12)+")";
+      hx.fillRect(Math.random()*HW,Math.random()*HH,1+Math.random(),1+Math.random()*2.5);
     }
     for(i=0;i<10;i++){                                       // knocks picked up in transit
-      var dcx=Math.random()*512,dcy=Math.random()*256,dr=6+Math.random()*9;
+      var dcx=Math.random()*HW,dcy=Math.random()*HH,dr=6+Math.random()*9;
       var dg=hx.createRadialGradient(dcx,dcy,0,dcx,dcy,dr);
       dg.addColorStop(0,"rgba(0,0,0,.28)");dg.addColorStop(1,"rgba(0,0,0,0)");
       hx.fillStyle=dg;hx.beginPath();hx.arc(dcx,dcy,dr,0,6.283);hx.fill();
     }
     [[0.048,0.046],[DRUM_H*0.35,0.040],[DRUM_H*0.65,0.040],[DRUM_H-0.048,0.046]].forEach(function(f){
-      var b=bandY(f[0]-f[1],f[0]+f[1],256);
-      hx.fillStyle="rgba(0,0,0,.5)";hx.fillRect(0,b[0],512,1.5);hx.fillRect(0,b[0]+b[1]-1.5,512,1.5);
+      var b=bandY(f[0]-f[1],f[0]+f[1],HH);
+      hx.fillStyle="rgba(0,0,0,.5)";hx.fillRect(0,b[0],HW,1.5);hx.fillRect(0,b[0]+b[1]-1.5,HW,1.5);
     });
 
     /* ---- roughness: enamel mid, hoops rubbed smooth, foot grimy ---- */
-    rx.fillStyle="#737373";rx.fillRect(0,0,512,256);                    // ~0.45
+    rx.fillStyle="#737373";rx.fillRect(0,0,SW,SH);                      // ~0.45
     [[DRUM_H*0.35,0.040],[DRUM_H*0.65,0.040],[0.048,0.046],[DRUM_H-0.048,0.046]].forEach(function(f){
-      var b=bandY(f[0]-f[1],f[0]+f[1],256);
-      rx.fillStyle="rgba(60,60,60,.85)";rx.fillRect(0,b[0],512,b[1]);   // handled = shinier
+      var b=bandY(f[0]-f[1],f[0]+f[1],SH);
+      rx.fillStyle="rgba(60,60,60,.85)";rx.fillRect(0,b[0],SW,b[1]);    // handled = shinier
     });
-    var rg=rx.createLinearGradient(0,256,0,196);
+    var rg=rx.createLinearGradient(0,SH,0,SH*0.766);
     rg.addColorStop(0,"rgba(215,215,215,.9)");rg.addColorStop(1,"rgba(215,215,215,0)");
-    rx.fillStyle=rg;rx.fillRect(0,196,512,60);                          // dust at the foot
+    rx.fillStyle=rg;rx.fillRect(0,SH*0.766,SW,SH*0.234);                // dust at the foot
     for(i=0;i<45;i++){                        // scuffs: barely there, or they read as mud
       rx.fillStyle="rgba(190,190,190,"+(0.05+Math.random()*0.07)+")";
-      rx.beginPath();rx.ellipse(Math.random()*512,Math.random()*256,4+Math.random()*9,2+Math.random()*4,Math.random()*3,0,6.283);rx.fill();
+      rx.beginPath();rx.ellipse(Math.random()*SW,Math.random()*SH,2+Math.random()*4.5,1+Math.random()*2,Math.random()*3,0,6.283);rx.fill();
     }
 
     /* ---- metalness: paint is dielectric, chips are bare steel ---- */
-    mx.fillStyle="#2b2b2b";mx.fillRect(0,0,512,256);                    // ~0.17
+    mx.fillStyle="#2b2b2b";mx.fillRect(0,0,SW,SH);                      // ~0.17
     [[0.048,0.046],[DRUM_H-0.048,0.046]].forEach(function(f){
-      var b=bandY(f[0]-f[1],f[0]+f[1],256);
-      mx.fillStyle="rgba(190,190,190,.55)";mx.fillRect(0,b[0],512,b[1]);
+      var b=bandY(f[0]-f[1],f[0]+f[1],SH);
+      mx.fillStyle="rgba(190,190,190,.55)";mx.fillRect(0,b[0],SW,b[1]);
     });
     for(i=0;i<90;i++){                        // bare steel only where paint really goes:
-      var mb=Math.random()<0.5?bandY(0.002,0.11,256):bandY(DRUM_H-0.11,DRUM_H-0.002,256);
+      var mb=Math.random()<0.5?bandY(0.002,0.11,SH):bandY(DRUM_H-0.11,DRUM_H-0.002,SH);
       mx.fillStyle="rgba(230,230,230,"+(0.3+Math.random()*0.45)+")";
-      mx.beginPath();mx.ellipse(Math.random()*512,mb[0]+Math.random()*mb[1],1+Math.random()*2.4,0.8+Math.random()*1.6,0,0,6.283);mx.fill();
+      mx.beginPath();mx.ellipse(Math.random()*SW,mb[0]+Math.random()*mb[1],0.6+Math.random()*1.2,0.4+Math.random()*0.8,0,0,6.283);mx.fill();
     }
 
     function tex(c,srgb){var t=new T.CanvasTexture(c);t.anisotropy=8;if(srgb)t.encoding=T.sRGBEncoding;return t;}
@@ -828,29 +917,48 @@ window.IONA3D = (function(){
   }
 
   /* ================= ACT 1 · TANK FARM ================= */
+  /* One texture, one set of materials, one set of geometries — shared by every tank.
+     They are all the same size, so nothing here needs to be rebuilt per tank. */
+  var tankTexCache=null;
   function tankTex(){
+    if(tankTexCache)return tankTexCache;
     var c=cv(1024,256),x=c.getContext("2d");
     x.fillStyle="#c8ccd0";x.fillRect(0,0,1024,256);
     x.strokeStyle="rgba(0,0,0,.18)";x.lineWidth=3;
     for(var y=30;y<256;y+=42){x.beginPath();x.moveTo(0,y);x.lineTo(1024,y);x.stroke();}
     x.fillStyle="#0e1116";x.font="bold 40px Helvetica,Arial";x.fillText("IONA ENERGY",60,150);
     x.fillStyle="#1a29ff";x.fillRect(60,170,220,10);
-    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;t.wrapS=T.RepeatWrapping;t.repeat.x=2;return t;
+    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;t.wrapS=T.RepeatWrapping;t.repeat.x=2;
+    tankTexCache=t;return t;
   }
+  var TANK_R=4, TANK_H=10;
+  var tankMat={
+    side:new T.MeshStandardMaterial({map:tankTex(),metalness:0.4,roughness:0.5}),
+    dome:paint(0xcfd4d9,0.5,0.45),
+    ring:paint(0x9aa0a6,0.6,0.4)
+  };
+  /* openEnded: the top disc sits exactly under the dome and the bottom one on the
+     ground, so neither was ever visible — and dropping them turns a three-material
+     mesh (one draw per material group) back into a single draw. */
+  var tankGeo={
+    body:new T.CylinderGeometry(TANK_R,TANK_R,TANK_H,48,1,true),
+    dome:new T.SphereGeometry(TANK_R,40,20,0,Math.PI*2,0,Math.PI/2),
+    ring:new T.TorusGeometry(TANK_R+0.02,0.05,8,48),
+    base:new T.CylinderGeometry(TANK_R+0.15,TANK_R+0.25,0.3,48),
+    lad:new T.BoxGeometry(0.12,TANK_H,0.12)
+  };
   function makeTank(r,h,x,z){
     var g=new T.Group();
-    var side=new T.MeshStandardMaterial({map:tankTex(),metalness:0.4,roughness:0.5});
-    var cap=paint(0xb7bcc2,0.4,0.5);
-    var body=new T.Mesh(new T.CylinderGeometry(r,r,h,48,1,false),[side,cap,cap]);
+    var body=new T.Mesh(tankGeo.body,tankMat.side);
     body.position.y=h/2;body.castShadow=true;body.receiveShadow=true;g.add(body);
-    var dome=new T.Mesh(new T.SphereGeometry(r,40,20,0,Math.PI*2,0,Math.PI/2),paint(0xcfd4d9,0.5,0.45));
+    var dome=new T.Mesh(tankGeo.dome,tankMat.dome);
     dome.scale.y=0.35;dome.position.y=h;dome.castShadow=true;g.add(dome);
     // seam rings
-    [0.33,0.66].forEach(function(f){var ring=new T.Mesh(new T.TorusGeometry(r+0.02,0.05,8,48),paint(0x9aa0a6,0.6,0.4));ring.rotation.x=Math.PI/2;ring.position.y=h*f;g.add(ring);});
+    [0.33,0.66].forEach(function(f){var ring=new T.Mesh(tankGeo.ring,tankMat.ring);ring.rotation.x=Math.PI/2;ring.position.y=h*f;g.add(ring);});
     // base ring
-    var base=new T.Mesh(new T.CylinderGeometry(r+0.15,r+0.25,0.3,48),L.M.dark);base.position.y=0.15;g.add(base);
+    var base=new T.Mesh(tankGeo.base,L.M.dark);base.position.y=0.15;g.add(base);
     // ladder
-    var lad=box(0.12,h,0.12,L.M.dark);lad.position.set(r+0.06,h/2,0);g.add(lad);
+    var lad=new T.Mesh(tankGeo.lad,L.M.dark);lad.position.set(r+0.06,h/2,0);g.add(lad);
     g.position.set(x,0,z);
     return g;
   }
@@ -968,14 +1076,15 @@ window.IONA3D = (function(){
       [1.0,-1.0].forEach(function(z){var mg=bx(x>3?1.3:2.4,0.08,0.62,blk);mg.position.set(x,1.16,z);g.add(mg);});
     });
 
-    g.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+    fuseByMaterial(g);          // the wheels are groups, so they survive this untouched
+    shadowBySize(g);
     g.userData.wheels=wheels;
     return g;
   }
   // the tank farm stays as it was: tanks, pipe rack and sliding flow bands, nothing else.
   // the road tanker has its own act further down the page.
 
-  act1.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+  shadowBySize(act1);
 
   /* ================= ACT 2 · TANKER =================
      A products tanker, hull first: the shape is lofted through stations — a table of
@@ -1184,7 +1293,10 @@ window.IONA3D = (function(){
       map:foamTex(2*HULL_L/FW*256,2.78/FD*2*256),transparent:true,depthWrite:false,opacity:0.5}));
     foam.rotation.x=-Math.PI/2;foam.position.set(-2.2,0.05,0);act2.add(foam);
 
-    ship.traverse(function(m){if(m.isMesh&&m!==hull){m.castShadow=true;m.receiveShadow=true;}});
+    /* Everything on deck is static relative to the hull, so fusing it changes nothing
+       on screen — but the 164 draws the detail used to cost collapse to a handful. */
+    fuseByMaterial(ship);
+    shadowBySize(ship,hull);
   })();
 
   /* ================= ACT 3 · ROAD TANKER =================
@@ -1199,18 +1311,27 @@ window.IONA3D = (function(){
     act3.add(truck3);
     var road=new T.Mesh(new T.BoxGeometry(240,0.06,9),paint(0x0f1216,0.05,0.92));
     road.position.y=0.02;road.receiveShadow=true;act3.add(road);
-    for(var i=-24;i<=24;i++){                       // dashed centre line
-      var dash=new T.Mesh(new T.BoxGeometry(2.2,0.02,0.16),paint(0x8a8f96,0.1,0.7));
-      dash.position.set(i*5,0.06,0);act3.add(dash);
+
+    /* The scenery is the same object repeated down the road — 49 dashes and 17 masts,
+       each of which used to be its own mesh, its own geometry and its own material:
+       101 draw calls for a decor the eye reads as motion blur. One InstancedMesh per
+       family sends the whole line in a single call. */
+    var _m=new T.Matrix4();
+    function line(geo,mat,n,place,shadow){
+      var im=new T.InstancedMesh(geo,mat,n);
+      for(var k=0;k<n;k++){var p=place(k);_m.makeTranslation(p[0],p[1],p[2]);im.setMatrixAt(k,_m);}
+      im.instanceMatrix.needsUpdate=true;
+      im.castShadow=!!shadow;im.receiveShadow=!!shadow;
+      act3.add(im);return im;
     }
-    for(var p=-8;p<=8;p++){                         // light masts to sweep past
-      var mast=new T.Mesh(new T.CylinderGeometry(0.1,0.13,7,10),paint(0x2b333c,0.6,0.5));
-      mast.position.set(p*15,3.5,-7.5);mast.castShadow=true;act3.add(mast);
-      var head=new T.Mesh(new T.BoxGeometry(1.3,0.22,0.5),L.M.dark);
-      head.position.set(p*15+0.55,7.0,-7.5);act3.add(head);
-      var lamp=new T.Mesh(new T.BoxGeometry(0.95,0.08,0.34),L.M.light);
-      lamp.position.set(p*15+0.55,6.86,-7.5);act3.add(lamp);
-    }
+    line(new T.BoxGeometry(2.2,0.02,0.16),paint(0x8a8f96,0.1,0.7),49,   // dashed centre line
+      function(k){return [(k-24)*5,0.06,0];});
+    line(new T.CylinderGeometry(0.1,0.13,7,10),paint(0x2b333c,0.6,0.5),17,  // light masts
+      function(k){return [(k-8)*15,3.5,-7.5];},true);
+    line(new T.BoxGeometry(1.3,0.22,0.5),L.M.dark,17,
+      function(k){return [(k-8)*15+0.55,7.0,-7.5];});
+    line(new T.BoxGeometry(0.95,0.08,0.34),L.M.light,17,
+      function(k){return [(k-8)*15+0.55,6.86,-7.5];});
   })();
 
   /* ================= ACT CONTROL ================= */
