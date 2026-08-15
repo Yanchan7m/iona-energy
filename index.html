@@ -658,10 +658,16 @@ window.IONA3D = (function(){
   function drumMaps(base,spec){
     var key=base+"|"+spec.big;if(drumCache[key])return drumCache[key];
     var W=1024,H=512,i,y,r2;
+    /* Only the colour map carries detail the eye resolves — the printed band, the UN
+       number, the chipped paint. The height field feeds a normal map at scale 0.55, and
+       roughness and metalness are broad bands with a few scuffs: quarter-size canvases
+       hold all of that and cost a quarter of the memory. */
+    var HW=512,HH=256;                                       // height field → normal map
+    var SW=256,SH=128;                                       // roughness + metalness
     var cc=cv(W,H),x=cc.getContext("2d");                    // colour
-    var hc=cv(512,256),hx=hc.getContext("2d");               // height → normal
-    var rc=cv(512,256),rx=rc.getContext("2d");               // roughness
-    var mc=cv(512,256),mx=mc.getContext("2d");               // metalness
+    var hc=cv(HW,HH),hx=hc.getContext("2d");                 // height → normal
+    var rc=cv(SW,SH),rx=rc.getContext("2d");                 // roughness
+    var mc=cv(SW,SH),mx=mc.getContext("2d");                 // metalness
     function cy(v,hh){return (1-v)*(hh||H);}                 // v=0 is the drum's base
     function bandY(y0,y1,hh){var a=cy(SHELL.vAt(y1),hh),b=cy(SHELL.vAt(y0),hh);return [a,b-a];}
 
@@ -722,46 +728,51 @@ window.IONA3D = (function(){
     }
 
     /* ---- height: fine grain, shallow dents, crevice lines ---- */
-    hx.fillStyle="#808080";hx.fillRect(0,0,512,256);
-    for(i=0;i<9000;i++){                                     // rolled-steel tooth
-      hx.fillStyle="rgba("+(Math.random()<0.5?"255,255,255,":"0,0,0,")+(0.05+Math.random()*0.09)+")";
-      hx.fillRect(Math.random()*512,Math.random()*256,1,1+Math.random()*2);
+    hx.fillStyle="#808080";hx.fillRect(0,0,HW,HH);
+    /* 1 500 marks rather than 9 000. This field is only ever read as a normal map at
+       normalScale 0.55, where the eye takes in the overall tooth of the steel and not
+       the individual specks; each mark carries a little more contrast and a little more
+       size to hold the same impression. This one loop was three quarters of every
+       canvas operation the page performed at load. */
+    for(i=0;i<1500;i++){                                     // rolled-steel tooth
+      hx.fillStyle="rgba("+(Math.random()<0.5?"255,255,255,":"0,0,0,")+(0.06+Math.random()*0.12)+")";
+      hx.fillRect(Math.random()*HW,Math.random()*HH,1+Math.random(),1+Math.random()*2.5);
     }
     for(i=0;i<10;i++){                                       // knocks picked up in transit
-      var dcx=Math.random()*512,dcy=Math.random()*256,dr=6+Math.random()*9;
+      var dcx=Math.random()*HW,dcy=Math.random()*HH,dr=6+Math.random()*9;
       var dg=hx.createRadialGradient(dcx,dcy,0,dcx,dcy,dr);
       dg.addColorStop(0,"rgba(0,0,0,.28)");dg.addColorStop(1,"rgba(0,0,0,0)");
       hx.fillStyle=dg;hx.beginPath();hx.arc(dcx,dcy,dr,0,6.283);hx.fill();
     }
     [[0.048,0.046],[DRUM_H*0.35,0.040],[DRUM_H*0.65,0.040],[DRUM_H-0.048,0.046]].forEach(function(f){
-      var b=bandY(f[0]-f[1],f[0]+f[1],256);
-      hx.fillStyle="rgba(0,0,0,.5)";hx.fillRect(0,b[0],512,1.5);hx.fillRect(0,b[0]+b[1]-1.5,512,1.5);
+      var b=bandY(f[0]-f[1],f[0]+f[1],HH);
+      hx.fillStyle="rgba(0,0,0,.5)";hx.fillRect(0,b[0],HW,1.5);hx.fillRect(0,b[0]+b[1]-1.5,HW,1.5);
     });
 
     /* ---- roughness: enamel mid, hoops rubbed smooth, foot grimy ---- */
-    rx.fillStyle="#737373";rx.fillRect(0,0,512,256);                    // ~0.45
+    rx.fillStyle="#737373";rx.fillRect(0,0,SW,SH);                      // ~0.45
     [[DRUM_H*0.35,0.040],[DRUM_H*0.65,0.040],[0.048,0.046],[DRUM_H-0.048,0.046]].forEach(function(f){
-      var b=bandY(f[0]-f[1],f[0]+f[1],256);
-      rx.fillStyle="rgba(60,60,60,.85)";rx.fillRect(0,b[0],512,b[1]);   // handled = shinier
+      var b=bandY(f[0]-f[1],f[0]+f[1],SH);
+      rx.fillStyle="rgba(60,60,60,.85)";rx.fillRect(0,b[0],SW,b[1]);    // handled = shinier
     });
-    var rg=rx.createLinearGradient(0,256,0,196);
+    var rg=rx.createLinearGradient(0,SH,0,SH*0.766);
     rg.addColorStop(0,"rgba(215,215,215,.9)");rg.addColorStop(1,"rgba(215,215,215,0)");
-    rx.fillStyle=rg;rx.fillRect(0,196,512,60);                          // dust at the foot
+    rx.fillStyle=rg;rx.fillRect(0,SH*0.766,SW,SH*0.234);                // dust at the foot
     for(i=0;i<45;i++){                        // scuffs: barely there, or they read as mud
       rx.fillStyle="rgba(190,190,190,"+(0.05+Math.random()*0.07)+")";
-      rx.beginPath();rx.ellipse(Math.random()*512,Math.random()*256,4+Math.random()*9,2+Math.random()*4,Math.random()*3,0,6.283);rx.fill();
+      rx.beginPath();rx.ellipse(Math.random()*SW,Math.random()*SH,2+Math.random()*4.5,1+Math.random()*2,Math.random()*3,0,6.283);rx.fill();
     }
 
     /* ---- metalness: paint is dielectric, chips are bare steel ---- */
-    mx.fillStyle="#2b2b2b";mx.fillRect(0,0,512,256);                    // ~0.17
+    mx.fillStyle="#2b2b2b";mx.fillRect(0,0,SW,SH);                      // ~0.17
     [[0.048,0.046],[DRUM_H-0.048,0.046]].forEach(function(f){
-      var b=bandY(f[0]-f[1],f[0]+f[1],256);
-      mx.fillStyle="rgba(190,190,190,.55)";mx.fillRect(0,b[0],512,b[1]);
+      var b=bandY(f[0]-f[1],f[0]+f[1],SH);
+      mx.fillStyle="rgba(190,190,190,.55)";mx.fillRect(0,b[0],SW,b[1]);
     });
     for(i=0;i<90;i++){                        // bare steel only where paint really goes:
-      var mb=Math.random()<0.5?bandY(0.002,0.11,256):bandY(DRUM_H-0.11,DRUM_H-0.002,256);
+      var mb=Math.random()<0.5?bandY(0.002,0.11,SH):bandY(DRUM_H-0.11,DRUM_H-0.002,SH);
       mx.fillStyle="rgba(230,230,230,"+(0.3+Math.random()*0.45)+")";
-      mx.beginPath();mx.ellipse(Math.random()*512,mb[0]+Math.random()*mb[1],1+Math.random()*2.4,0.8+Math.random()*1.6,0,0,6.283);mx.fill();
+      mx.beginPath();mx.ellipse(Math.random()*SW,mb[0]+Math.random()*mb[1],0.6+Math.random()*1.2,0.4+Math.random()*0.8,0,0,6.283);mx.fill();
     }
 
     function tex(c,srgb){var t=new T.CanvasTexture(c);t.anisotropy=8;if(srgb)t.encoding=T.sRGBEncoding;return t;}
