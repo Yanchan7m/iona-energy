@@ -590,6 +590,74 @@ window.IONA3D = (function(){
   function box(w,h,d,mat){var m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);return m;}
   function cv(w,h){var c=document.createElement("canvas");c.width=w;c.height=h;return c;}
 
+  /* A mesh only earns a place in the shadow pass if it is big enough to leave a mark.
+     The key light's shadow camera spans 52 units onto a 2048px map — roughly 39 texels
+     per unit — so a 0.05-unit railing stanchion covers two texels. It used to cost a
+     full draw call and return nothing visible. Bounding-box volume is the cheapest
+     honest proxy for "would this read as a shadow at all". Measured in geometry space,
+     which is close enough here: nothing in these scenes is scaled far from 1. */
+  /* Three's core build ships without BufferGeometryUtils, so here is the minimum that
+     does the job: concatenate already-positioned geometries into one buffer. Only
+     position, normal and uv are carried — enough for every part welded below. */
+  function mergeGeos(list){
+    var pos=[],nor=[],uv=[],idx=[],off=0;
+    list.forEach(function(g){
+      var p=g.attributes.position,n=g.attributes.normal,u=g.attributes.uv,i,ix;
+      for(i=0;i<p.count;i++){
+        pos.push(p.getX(i),p.getY(i),p.getZ(i));
+        if(n)nor.push(n.getX(i),n.getY(i),n.getZ(i));else nor.push(0,1,0);
+        if(u)uv.push(u.getX(i),u.getY(i));else uv.push(0,0);
+      }
+      ix=g.index;
+      if(ix)for(i=0;i<ix.count;i++)idx.push(ix.getX(i)+off);
+      else for(i=0;i<p.count;i++)idx.push(i+off);
+      off+=p.count;
+    });
+    var out=new T.BufferGeometry();
+    out.setAttribute("position",new T.Float32BufferAttribute(pos,3));
+    out.setAttribute("normal",new T.Float32BufferAttribute(nor,3));
+    out.setAttribute("uv",new T.Float32BufferAttribute(uv,2));
+    out.setIndex(idx);                       // Three picks 16- or 32-bit on its own
+    return out;
+  }
+  /* Bake each mesh's own transform into its vertices, then fuse the lot into one. */
+  function weld(meshes,material){
+    var geos=meshes.map(function(m){m.updateMatrix();return m.geometry.clone().applyMatrix4(m.matrix);});
+    var fused=new T.Mesh(mergeGeos(geos),material);
+    geos.forEach(function(g){g.dispose();});
+    return fused;
+  }
+  /* Fuse a group's direct mesh children, one merged mesh per material. Anything alone
+     with its material is left untouched — that costs nothing to skip and it keeps
+     meshes carrying extra attributes (the hull's vertex colours) intact. Child groups
+     are never touched, which is what keeps the truck's wheels free to turn. */
+  function fuseByMaterial(root){
+    var byMat=new Map();
+    root.children.forEach(function(m){
+      if(!m.isMesh||m.geometry.attributes.color)return;
+      var b=byMat.get(m.material);
+      if(!b){b=[];byMat.set(m.material,b);}
+      b.push(m);
+    });
+    byMat.forEach(function(list,mat){
+      if(list.length<2)return;
+      list.forEach(function(m){root.remove(m);});
+      root.add(weld(list,mat));
+    });
+  }
+
+  var SHADOW_MIN_VOL=0.05;
+  var _sz=new T.Vector3();
+  function shadowBySize(root,skip){
+    root.traverse(function(m){
+      if(!m.isMesh||m===skip)return;
+      if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();
+      m.geometry.boundingBox.getSize(_sz);
+      var big=(_sz.x*_sz.y*_sz.z)>=SHADOW_MIN_VOL;
+      m.castShadow=big;m.receiveShadow=big;
+    });
+  }
+
   /* ---------- Land ground (acts 0,1) ---------- */
   var land=new T.Mesh(new T.PlaneGeometry(600,600),paint(0x0a0e13,0,0.95));
   land.rotation.x=-Math.PI/2;land.receiveShadow=true;scene.add(land);
@@ -1008,14 +1076,15 @@ window.IONA3D = (function(){
       [1.0,-1.0].forEach(function(z){var mg=bx(x>3?1.3:2.4,0.08,0.62,blk);mg.position.set(x,1.16,z);g.add(mg);});
     });
 
-    g.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+    fuseByMaterial(g);          // the wheels are groups, so they survive this untouched
+    shadowBySize(g);
     g.userData.wheels=wheels;
     return g;
   }
   // the tank farm stays as it was: tanks, pipe rack and sliding flow bands, nothing else.
   // the road tanker has its own act further down the page.
 
-  act1.traverse(function(m){if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+  shadowBySize(act1);
 
   /* ================= ACT 2 · TANKER =================
      A products tanker, hull first: the shape is lofted through stations — a table of
@@ -1224,7 +1293,10 @@ window.IONA3D = (function(){
       map:foamTex(2*HULL_L/FW*256,2.78/FD*2*256),transparent:true,depthWrite:false,opacity:0.5}));
     foam.rotation.x=-Math.PI/2;foam.position.set(-2.2,0.05,0);act2.add(foam);
 
-    ship.traverse(function(m){if(m.isMesh&&m!==hull){m.castShadow=true;m.receiveShadow=true;}});
+    /* Everything on deck is static relative to the hull, so fusing it changes nothing
+       on screen — but the 164 draws the detail used to cost collapse to a handful. */
+    fuseByMaterial(ship);
+    shadowBySize(ship,hull);
   })();
 
   /* ================= ACT 3 · ROAD TANKER =================
@@ -1239,18 +1311,27 @@ window.IONA3D = (function(){
     act3.add(truck3);
     var road=new T.Mesh(new T.BoxGeometry(240,0.06,9),paint(0x0f1216,0.05,0.92));
     road.position.y=0.02;road.receiveShadow=true;act3.add(road);
-    for(var i=-24;i<=24;i++){                       // dashed centre line
-      var dash=new T.Mesh(new T.BoxGeometry(2.2,0.02,0.16),paint(0x8a8f96,0.1,0.7));
-      dash.position.set(i*5,0.06,0);act3.add(dash);
+
+    /* The scenery is the same object repeated down the road — 49 dashes and 17 masts,
+       each of which used to be its own mesh, its own geometry and its own material:
+       101 draw calls for a decor the eye reads as motion blur. One InstancedMesh per
+       family sends the whole line in a single call. */
+    var _m=new T.Matrix4();
+    function line(geo,mat,n,place,shadow){
+      var im=new T.InstancedMesh(geo,mat,n);
+      for(var k=0;k<n;k++){var p=place(k);_m.makeTranslation(p[0],p[1],p[2]);im.setMatrixAt(k,_m);}
+      im.instanceMatrix.needsUpdate=true;
+      im.castShadow=!!shadow;im.receiveShadow=!!shadow;
+      act3.add(im);return im;
     }
-    for(var p=-8;p<=8;p++){                         // light masts to sweep past
-      var mast=new T.Mesh(new T.CylinderGeometry(0.1,0.13,7,10),paint(0x2b333c,0.6,0.5));
-      mast.position.set(p*15,3.5,-7.5);mast.castShadow=true;act3.add(mast);
-      var head=new T.Mesh(new T.BoxGeometry(1.3,0.22,0.5),L.M.dark);
-      head.position.set(p*15+0.55,7.0,-7.5);act3.add(head);
-      var lamp=new T.Mesh(new T.BoxGeometry(0.95,0.08,0.34),L.M.light);
-      lamp.position.set(p*15+0.55,6.86,-7.5);act3.add(lamp);
-    }
+    line(new T.BoxGeometry(2.2,0.02,0.16),paint(0x8a8f96,0.1,0.7),49,   // dashed centre line
+      function(k){return [(k-24)*5,0.06,0];});
+    line(new T.CylinderGeometry(0.1,0.13,7,10),paint(0x2b333c,0.6,0.5),17,  // light masts
+      function(k){return [(k-8)*15,3.5,-7.5];},true);
+    line(new T.BoxGeometry(1.3,0.22,0.5),L.M.dark,17,
+      function(k){return [(k-8)*15+0.55,7.0,-7.5];});
+    line(new T.BoxGeometry(0.95,0.08,0.34),L.M.light,17,
+      function(k){return [(k-8)*15+0.55,6.86,-7.5];});
   })();
 
   /* ================= ACT CONTROL ================= */
