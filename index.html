@@ -62,6 +62,13 @@
     .cap::before{inset:-96px -40px;
       background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.93),rgba(7,9,12,.74) 44%,rgba(7,9,12,.28) 74%,rgba(7,9,12,0) 100%)}
   }
+  /* the tank farm is the one scene bright enough to swallow white type: the tanks are
+     near-white and fill the frame behind the copy, where the sea and the drums are both
+     dark. This caption alone gets a denser scrim, and the sub-copy stays near full ink
+     instead of dropping to --muted, which was disappearing into the plating. */
+  #cap1::before{
+    background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(7,9,12,.97),rgba(7,9,12,.9) 46%,rgba(7,9,12,.6) 74%,rgba(7,9,12,0) 100%)}
+  #cap1 .sub{color:#d3dae1}
   .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent-ink);
     display:inline-flex;align-items:center;gap:10px;margin:0 0 18px}
   .eyebrow::before{content:"";width:26px;height:1px;background:var(--accent-ink)}
