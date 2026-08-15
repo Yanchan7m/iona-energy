@@ -337,7 +337,10 @@ window.IONA3D = (function(){
   /* ---------- Renderer ---------- */
   function makeRenderer(canvas){
     var r = new T.WebGLRenderer({canvas:canvas, antialias:true});
-    r.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+    /* 1.5 rather than 2: with MSAA on and a full shadow pass, a DPR-3 phone was
+       rendering four times the pixels of 1x, twice per frame. Above 1.5 the gain is
+       invisible on a scene this dark and the cost is the whole mobile frame budget. */
+    r.setPixelRatio(Math.min(1.5, window.devicePixelRatio||1));
     r.shadowMap.enabled = true;
     r.shadowMap.type = T.PCFSoftShadowMap;
     r.outputEncoding = T.sRGBEncoding;
