@@ -831,29 +831,48 @@ window.IONA3D = (function(){
   }
 
   /* ================= ACT 1 · TANK FARM ================= */
+  /* One texture, one set of materials, one set of geometries — shared by every tank.
+     They are all the same size, so nothing here needs to be rebuilt per tank. */
+  var tankTexCache=null;
   function tankTex(){
+    if(tankTexCache)return tankTexCache;
     var c=cv(1024,256),x=c.getContext("2d");
     x.fillStyle="#c8ccd0";x.fillRect(0,0,1024,256);
     x.strokeStyle="rgba(0,0,0,.18)";x.lineWidth=3;
     for(var y=30;y<256;y+=42){x.beginPath();x.moveTo(0,y);x.lineTo(1024,y);x.stroke();}
     x.fillStyle="#0e1116";x.font="bold 40px Helvetica,Arial";x.fillText("IONA ENERGY",60,150);
     x.fillStyle="#1a29ff";x.fillRect(60,170,220,10);
-    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;t.wrapS=T.RepeatWrapping;t.repeat.x=2;return t;
+    var t=new T.CanvasTexture(c);t.anisotropy=8;t.encoding=T.sRGBEncoding;t.wrapS=T.RepeatWrapping;t.repeat.x=2;
+    tankTexCache=t;return t;
   }
+  var TANK_R=4, TANK_H=10;
+  var tankMat={
+    side:new T.MeshStandardMaterial({map:tankTex(),metalness:0.4,roughness:0.5}),
+    dome:paint(0xcfd4d9,0.5,0.45),
+    ring:paint(0x9aa0a6,0.6,0.4)
+  };
+  /* openEnded: the top disc sits exactly under the dome and the bottom one on the
+     ground, so neither was ever visible — and dropping them turns a three-material
+     mesh (one draw per material group) back into a single draw. */
+  var tankGeo={
+    body:new T.CylinderGeometry(TANK_R,TANK_R,TANK_H,48,1,true),
+    dome:new T.SphereGeometry(TANK_R,40,20,0,Math.PI*2,0,Math.PI/2),
+    ring:new T.TorusGeometry(TANK_R+0.02,0.05,8,48),
+    base:new T.CylinderGeometry(TANK_R+0.15,TANK_R+0.25,0.3,48),
+    lad:new T.BoxGeometry(0.12,TANK_H,0.12)
+  };
   function makeTank(r,h,x,z){
     var g=new T.Group();
-    var side=new T.MeshStandardMaterial({map:tankTex(),metalness:0.4,roughness:0.5});
-    var cap=paint(0xb7bcc2,0.4,0.5);
-    var body=new T.Mesh(new T.CylinderGeometry(r,r,h,48,1,false),[side,cap,cap]);
+    var body=new T.Mesh(tankGeo.body,tankMat.side);
     body.position.y=h/2;body.castShadow=true;body.receiveShadow=true;g.add(body);
-    var dome=new T.Mesh(new T.SphereGeometry(r,40,20,0,Math.PI*2,0,Math.PI/2),paint(0xcfd4d9,0.5,0.45));
+    var dome=new T.Mesh(tankGeo.dome,tankMat.dome);
     dome.scale.y=0.35;dome.position.y=h;dome.castShadow=true;g.add(dome);
     // seam rings
-    [0.33,0.66].forEach(function(f){var ring=new T.Mesh(new T.TorusGeometry(r+0.02,0.05,8,48),paint(0x9aa0a6,0.6,0.4));ring.rotation.x=Math.PI/2;ring.position.y=h*f;g.add(ring);});
+    [0.33,0.66].forEach(function(f){var ring=new T.Mesh(tankGeo.ring,tankMat.ring);ring.rotation.x=Math.PI/2;ring.position.y=h*f;g.add(ring);});
     // base ring
-    var base=new T.Mesh(new T.CylinderGeometry(r+0.15,r+0.25,0.3,48),L.M.dark);base.position.y=0.15;g.add(base);
+    var base=new T.Mesh(tankGeo.base,L.M.dark);base.position.y=0.15;g.add(base);
     // ladder
-    var lad=box(0.12,h,0.12,L.M.dark);lad.position.set(r+0.06,h/2,0);g.add(lad);
+    var lad=new T.Mesh(tankGeo.lad,L.M.dark);lad.position.set(r+0.06,h/2,0);g.add(lad);
     g.position.set(x,0,z);
     return g;
   }
